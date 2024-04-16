@@ -12,7 +12,7 @@ export const describe = 'Отчет по репозиториям'
 export const aliases = ['rep', 'r'];
 
 export const builder = (yargs: yargs.Argv) => {
-    return QueryOptions(yargs, true)
+    return QueryOptions(yargs, false)
         .options({
             output: {
                 desc: 'Способ вывода отобранных проектов - на консоль или json-файл в текущий каталог',

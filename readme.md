@@ -26,13 +26,14 @@ $ gitlab-tools clone -d ./repos -q archived=false -q search=dictionary -q topic=
 
 1. [Локальная](#локальная-установка) - когда мы компилируем скрипты в каталоге репы и запускаем всегда из этого каталога
 2. [Глобальная](#глобальная-установка) - когда скрипт устанавливается, как глобальный npm-модуль и доступен по имени `gitab-tools` из всех шеллов и из любого места системы
+3. [Докер образ](#сборка-докер-образа) - для тех, кому не хочется ставить локально node.js
 
 ### Локальная установка
 
 Это самы простой и надежный вариант с единственным нюансом - скрипт будет доступен только из каталога, в который он установлен.
 
 ```bash
-$ git pull git@github.com:Snowbridge/gitlab-tools.git
+$ git pull git@git.a-fin.tech:l.sadovsky/gitlab-tools.git
 $ cd ./gitlab-tools # скрипт будет жить в этом каталоге
 $ mkdir out # команда report будет сюда складывать json-отчеты
 $ npm install
@@ -77,6 +78,27 @@ export GITLAB_TOKEN="TC79o8Y6wqr4DAubzrYP"
 и перезагрузить *shrc командой `$ . ~/.bashrc` (`$ . ~/.zshrc`)
 
 На винде - см сюда: https://phoenixnap.com/kb/windows-set-environment-variable#ftoc-heading-4
+
+### Сборка докер образа
+
+Процесс состоит из фактически одного этапа - сборка докер-образа:
+
+```bash
+#  клоним репу, как обычно
+$ git pull git@git.a-fin.tech:l.sadovsky/gitlab-tools.git
+$ cd ./gitlab-tools 
+# собираем образ
+#   аргументы TOKEN и HOST не обязательны, но, если их не указать, то потом при запуске контейнера придется все время из в командной строке передавать
+#   имя образа включает `-afin` как раз, чтобы намекнуть, что это узкозаточенный образ
+$ docker build -t gitlab-tools-afin --build-arg TOKEN=${your-gitlab-token} --build-arg HOST=git.a-fin.tech .
+```
+
+Дальше просто используем через `docker run`:
+
+```bash
+# Вывести на консоль все репы, у которых в имени есть `bg-pa`
+$ docker run --rm gitlab-tools-afin gitlab-tools report -q search=bg-pa
+```
 
 ## Пример использования отбора по метаданным
 
