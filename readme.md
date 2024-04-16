@@ -71,7 +71,7 @@ $ gitlab-tools --help
 На `linux` или в `git bash for windows` просто добавляем в `~/.bashrc` или `~/.zshrc` строки:
 
 ```shell
-export GITLAB_HOST="gitlab-01.mgmt.oboz.app"
+export GITLAB_HOST="git.a-fin.tech"
 export GITLAB_TOKEN="TC79o8Y6wqr4DAubzrYP"
 ```
 
