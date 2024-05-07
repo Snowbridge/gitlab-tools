@@ -21,12 +21,6 @@ export const builder = (yargs: yargs.Argv) => {
                 default: '.',
                 group: 'Clone'
             },
-            'escape-path': {
-                desc: 'Флаг актуален для windows: перед созданием структуры каталогов для репозитория удалить символы, недопустимые для NTFS',
-                alias: ['escape'],
-                default: false,
-                group: 'Clone'
-            },
             'existing': {
                 desc: [
                     'Что делать, если репа уже склонирована',
@@ -78,17 +72,6 @@ export const builder = (yargs: yargs.Argv) => {
                 ].join('\n\t'),
                 alias: ['trim']
             },
-            'pinch-off-path': {
-                type: 'string',
-                desc: [
-                    'Отрезать указанную строку от начала локального пути',
-                    'например, `--pinch-off-path root-group/` отрежет переданную подстроку от начала локальных путей всех полученных реп',
-                    'рикаких проверок на корректность итогового пути не выполняется, по этому - внимательнее со слэшами',
-                    'применяется ПЕРЕД --ltrim-path'
-                ].join('\n\t'),
-                default: '',
-                alias: ['pinch']
-            },
             'resume-from': {
                 desc: [
                     'Репы перед обработкой сортируются по path, этот параметр позволяет начать не с самой первой репы, а с указанной',
@@ -103,10 +86,24 @@ export const builder = (yargs: yargs.Argv) => {
                 default: 22,
                 desc: 'TCP-порт, на котором гитлаб ждёт SSH-подключений',
             },
-            'on-fail': {
-                desc: 'Что делать, если при обработке очередной репы произошло исключение',
+            'on-fail-filesystem': {
+                desc: 'Что делать, если произошло исключение файловой системы при обработке очередной репы',
                 choices: ['skip', 'abort'],
-                default: 'skip'
+                default: 'skip',
+                alias: ['on-fail-fs', 'on-fs', 'errfs']
+            },
+            'on-fail-network': {
+                desc: 'Что делать, если произошло сетевое исключение при обработке очередной репы',
+                choices: ['skip', 'abort', 'retry'],
+                default: 'retry',
+                alias: ['on-fail-net', 'on-net', 'errnet']
+
+            },
+            'network-retries-count': {
+                desc: '',
+                default: 3,
+                alias: ['retry']
+
             }
         })
 }
@@ -120,13 +117,13 @@ export const handler = async function (argv: any) {
                 projects,
                 argv.directory,
                 argv.ltrimPath,
-                argv.escape,
                 argv.existing,
-                argv.onFail,
+                argv.onFailFilesystem,
+                argv.onFailNetwork,
+                argv.onFailNetworkRetiesCount,
                 argv.cloneFlags,
                 argv.fetchFlags,
-                argv.pullFlags,
-                argv.pinchOffPath
+                argv.pullFlags
             )
 
             cloner.execute()
