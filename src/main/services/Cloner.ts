@@ -1,10 +1,12 @@
 
 
 import * as fs from 'fs'
-import { exec } from 'node:child_process'
-import { ExecException } from "child_process"
 import { ProjectDTO } from '../common/DTO/Project'
 import * as Path from 'node:path'
+import { GitFetchCliHandler } from './GitCliHandlers/GitFetchCliHandler'
+import { AbstractGitCliHandler } from './GitCliHandlers/AbstractGitCliHandler'
+import { GitPullCliHandler } from './GitCliHandlers/GitPullCliHandler'
+import { GitCloneCliHandler } from './GitCliHandlers/GitCloneCliHandler'
 
 export type ExistingRepoBehaviour = 'skip' | 'drop' | 'fetch' | 'pull'
 export class GitCloner {
@@ -36,7 +38,7 @@ export class GitCloner {
     ) {
         this.gitSshUrl = `ssh://git@${baseSshUrl}`
         this.projects = projects
-        this.directory = trimSlashes(directory)
+        this.directory = Path.normalize(directory)
         this.ltrimPath = ltrimPath
         this.existingBehaviour = existingBehaviour
         this.gitCloneFlags = gitCloneFlags || ''
@@ -81,50 +83,36 @@ export class GitCloner {
             } catch (error) {
                 if (this.onFailFilesystem == 'abort')
                     throw error
-                
+
                 continue
             }
 
             try {
                 const workingCopyAlreadyExists = fs.existsSync(Path.join(absoluteLocalPath, ".git"))
 
-                const cloneHandlerMethod = this.getHandlerMethod(workingCopyAlreadyExists)
+                const gitCliHandler = this.gitHandlerFactory(workingCopyAlreadyExists, gitPath, absoluteLocalPath)
 
-                if(!cloneHandlerMethod){
+                if (!gitCliHandler) {
                     console.log('Склонирован ранее и пропущен ' + project.path_with_namespace)
                     continue
                 }
 
-                await cloneHandlerMethod(gitPath, absoluteLocalPath)
+                await gitCliHandler.execute()
 
             } catch (error) {
                 switch (this.onFailNetwork) {
                     case 'retry':
-                        if(this.onFailNetworkRetiesCount>queueElement.attempt){
+                        if (this.onFailNetworkRetiesCount > queueElement.attempt) {
                             queueElement.attempt += 1
                             projectsQueue.push(queueElement)
-    
-                        }                        
+                            console.log(`Неудачная попытка #${queueElement.attempt} обработки '${queueElement.project.path_with_namespace}', попробуем еще раз позже, осталось попыток ${this.onFailNetworkRetiesCount - queueElement.attempt}`)
+                        }
                         break;
                     case 'abort':
                         return
-                }                
+                }
             }
         }
-    }
-
-    private getHandlerMethod(workingCopyAlreadyExists: boolean) {
-        if (workingCopyAlreadyExists) {
-            switch (this.existingBehaviour) {
-                case 'skip':
-                    return undefined
-                case 'fetch':
-                    return this.gitFetch
-                case 'pull':
-                    return this.gitPull
-            }
-        }
-        return this.gitClone
     }
 
     private getProjectAbsoluteLocalPath(project: ProjectDTO): string {
@@ -137,62 +125,17 @@ export class GitCloner {
         )
     }
 
-    private async executeConsoleCommand(command: string, workDir: string): Promise<boolean> {
-        return new Promise<boolean>((resolve, reject): void => {
-            try {
-                exec(command,
-                    {
-                        cwd: workDir
-                    },
-                    (error: ExecException | null, stdout: string, stderr: string) => {
-                        if (error)
-                            throw { error: error, stdout: stdout, stderr: stderr }
-
-                        resolve(true)
-                    }
-                )
-            } catch (error) {
-                reject(false)
+    private gitHandlerFactory(workingCopyAlreadyExists: boolean, remotePath: string, localPath: string): AbstractGitCliHandler | undefined {
+        if (workingCopyAlreadyExists) {
+            switch (this.existingBehaviour) {
+                case 'skip':
+                    return undefined
+                case 'fetch':
+                    return new GitFetchCliHandler(localPath, this.gitFetchFlags || '')
+                case 'pull':
+                    return new GitPullCliHandler(localPath, this.gitPullFlags || '')
             }
-        })
-    }
-
-    private async gitClone(gitPath: string, localPath: string) {
-        if (await this.executeConsoleCommand(
-            `git clone ${this.gitCloneFlags} ${gitPath} ${localPath}`,
-            '.'
-        )) {
-            console.log('Успешно склонирован ' + gitPath)
-        } else {
-            console.error('Не удалось склонировать ' + gitPath)
         }
+        return new GitCloneCliHandler(remotePath, localPath, this.gitCloneFlags || '') // ну, да, не очень круто, что зависимость от реализаций сохраняется, но думать дальше лень
     }
-
-    private async gitFetch(_gitPath: string, localPath: string) {
-        if (await this.executeConsoleCommand(
-            `git fetch ${this.gitFetchFlags}`,
-            localPath
-        )) {
-            console.log("Успешно получены изменения в " + localPath)
-        } else {
-            console.error('Не удалось получить изменения для ' + localPath)
-        }
-    }
-
-    private async gitPull(_gitPath: string, localPath: string) {
-        if (await this.executeConsoleCommand(
-            `git pull ${this.gitPullFlags}`,
-            localPath
-        )) {
-            console.log("Успешно смержены изменения в " + localPath)
-        } else {
-            console.error('Не удалось смержить изменения для ' + localPath)
-        }
-    }
-
-}
-
-// strips off leadng and trailing path delimeter `/qwe/asd/zc/` >> `qwe/asd/zxc`
-function trimSlashes(directory: string): string {
-    return directory.replace(/(^(\/|\\)*)|((\/|\\)*$)/g, '')
 }
