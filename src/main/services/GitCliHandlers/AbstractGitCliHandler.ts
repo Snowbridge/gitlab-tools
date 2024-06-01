@@ -14,7 +14,7 @@ export abstract class AbstractGitCliHandler {
         return new Promise<boolean>((resolve, reject): void => {
             exec(
                 this.getCommand(),
-                { cwd: this.localPath },
+                {  },
                 (error: ExecException | null, stdout: string, stderr: string) => {
                     if (error)
                         return reject({ error: error, stdout: stdout, stderr: stderr })

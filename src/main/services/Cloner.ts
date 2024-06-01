@@ -80,7 +80,9 @@ export class GitCloner {
 
     private getProjectAbsoluteLocalPath(project: ProjectDTO): string {
         return Path.join(
-            this.directory,
+            Path.resolve(
+                this.directory
+            ),
             project.path_with_namespace
                 .split('/')
                 .slice(this.ltrimPath)

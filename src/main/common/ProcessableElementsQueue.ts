@@ -3,7 +3,7 @@ type QueueElement<T = any> = {
     attempt: number
 }
 
-type ProcessorCallback<T = any> = (value: T) => void
+type ProcessorCallback<T = any> =  (value: T) => Promise<void>
 
 export class ProcessableElementsQueue<T = any> {
     private queue: QueueElement<T>[]
@@ -28,17 +28,17 @@ export class ProcessableElementsQueue<T = any> {
 
     // для случаев, когда в колбэке могут возникать исключения, которые нельзя ретраить ни при каких значениях входящей настройки ретрая
     //  в этом случае вся retriable-обработка происходит в колбэке, а non-retriable где-то снаружи колбэка
-    processElement(element: QueueElement<T>, callback: ProcessorCallback<T>) {
+    async processElement(element: QueueElement<T>, callback: ProcessorCallback<T>) {
         try {
-            callback(element.value)
+            await callback(element.value)
         } catch (error) {
             if (this.onError == 'abort')
                 throw error
             if (this.onError == 'retry' && element.attempt < this.retriesCount) {
                 element.attempt += 1
                 this.queue.push(element)
-            } else {
-                console.log(`Element has been skipped due to processing exception ${error}`)
+            } else {                
+                console.log(`${(element.value as {[key:string]:any})['name']||'<unknown>'} has been skipped due to processing exception: ${error}`)
             }
         }
     }
