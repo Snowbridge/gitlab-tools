@@ -85,25 +85,6 @@ export const builder = (yargs: yargs.Argv) => {
                 type: 'number',
                 default: 22,
                 desc: 'TCP-порт, на котором гитлаб ждёт SSH-подключений',
-            },
-            'on-fail-filesystem': {
-                desc: 'Что делать, если произошло исключение файловой системы при обработке очередной репы',
-                choices: ['skip', 'abort'],
-                default: 'skip',
-                alias: ['on-fail-fs', 'on-fs', 'errfs']
-            },
-            'on-fail-network': {
-                desc: 'Что делать, если произошло сетевое исключение при обработке очередной репы',
-                choices: ['skip', 'abort', 'retry'],
-                default: 'retry',
-                alias: ['on-fail-net', 'on-net', 'errnet']
-
-            },
-            'network-retries-count': {
-                desc: '',
-                default: 3,
-                alias: ['retry']
-
             }
         })
 }
@@ -118,9 +99,8 @@ export const handler = async function (argv: any) {
                 argv.directory,
                 argv.ltrimPath,
                 argv.existing,
-                argv.onFailFilesystem,
-                argv.onFailNetwork,
-                argv.onFailNetworkRetiesCount,
+                argv.onError,
+                argv.retiesCount,
                 argv.cloneFlags,
                 argv.fetchFlags,
                 argv.pullFlags

@@ -7,6 +7,7 @@ import { GitFetchCliHandler } from './GitCliHandlers/GitFetchCliHandler'
 import { AbstractGitCliHandler } from './GitCliHandlers/AbstractGitCliHandler'
 import { GitPullCliHandler } from './GitCliHandlers/GitPullCliHandler'
 import { GitCloneCliHandler } from './GitCliHandlers/GitCloneCliHandler'
+import { ProcessableElementsQueue } from '../common/ProcessableElementsQueue'
 
 export type ExistingRepoBehaviour = 'skip' | 'drop' | 'fetch' | 'pull'
 export class GitCloner {
@@ -19,9 +20,7 @@ export class GitCloner {
     private gitFetchFlags?: string
     private gitPullFlags?: string
     private ltrimPath: number
-    private onFailFilesystem: 'skip' | 'abort'
-    private onFailNetwork: 'abort' | 'skip' | 'retry'
-    private onFailNetworkRetiesCount: number
+    private queue: ProcessableElementsQueue<ProjectDTO>
 
     constructor(
         baseSshUrl: string,
@@ -29,9 +28,8 @@ export class GitCloner {
         directory: string,
         ltrimPath: number,
         existingBehaviour: ExistingRepoBehaviour = 'skip',
-        onFailFilesystem: 'skip' | 'abort',
-        onFailNetwork: 'abort' | 'skip' | 'retry',
-        onFailNetworkRetiesCount: number,
+        onError: 'abort' | 'skip' | 'retry',
+        retiesCount: number,
         gitCloneFlags?: string,
         gitFetchFlags?: string,
         gitPullFlags?: string
@@ -44,9 +42,7 @@ export class GitCloner {
         this.gitCloneFlags = gitCloneFlags || ''
         this.gitFetchFlags = gitFetchFlags || '--all --prune --force'
         this.gitPullFlags = gitPullFlags || '--progress -v --no-rebase "origin"'
-        this.onFailFilesystem = onFailFilesystem
-        this.onFailNetwork = onFailNetwork
-        this.onFailNetworkRetiesCount = onFailNetworkRetiesCount
+        this.queue = new ProcessableElementsQueue<ProjectDTO>(projects, onError, retiesCount)
     }
 
     async execute() {
@@ -56,62 +52,29 @@ export class GitCloner {
                 recursive: true
             })
 
-        const projectsQueue = this.projects.map(it => {
-            return {
-                project: it,
-                attempt: 0
-            }
-        })
+        while (this.queue.hasNext()) {
+            const element = this.queue.next()
+            const project = element.value
 
-        while (projectsQueue.length) {
-            const queueElement = projectsQueue.shift()
-            if (!queueElement)
-                throw Error(`Не может такого быть, поскольку цикл крутится только, пока элементы есть`);
-
-            const project = queueElement.project
             const gitPath = `${this.gitSshUrl}/${project.path_with_namespace}.git`
             const absoluteLocalPath = this.getProjectAbsoluteLocalPath(project)
-            try {
-                fs.mkdirSync(absoluteLocalPath, { recursive: true })
 
-                if (this.existingBehaviour == 'drop') //в случае, если папка пуста, мы ничего не теряем
-                    fs.rmSync(
-                        Path.join(absoluteLocalPath, "*"),
-                        { force: true, recursive: true }
-                    )
+            fs.mkdirSync(absoluteLocalPath, { recursive: true }) // если это свалится, то ретраить ничего не будем
 
-            } catch (error) {
-                if (this.onFailFilesystem == 'abort')
-                    throw error
+            if (this.existingBehaviour == 'drop') //в случае, если папка пуста, мы ничего не теряем
+                fs.rmSync(
+                    Path.join(absoluteLocalPath, "*"),
+                    { force: true, recursive: true }
+                )
 
-                continue
-            }
-
-            try {
+            this.queue.processElement(element, async (project) => {
                 const workingCopyAlreadyExists = fs.existsSync(Path.join(absoluteLocalPath, ".git"))
-
                 const gitCliHandler = this.gitHandlerFactory(workingCopyAlreadyExists, gitPath, absoluteLocalPath)
-
                 if (!gitCliHandler) {
                     console.log('Склонирован ранее и пропущен ' + project.path_with_namespace)
-                    continue
-                }
-
-                await gitCliHandler.execute()
-
-            } catch (error) {
-                switch (this.onFailNetwork) {
-                    case 'retry':
-                        if (this.onFailNetworkRetiesCount > queueElement.attempt) {
-                            queueElement.attempt += 1
-                            projectsQueue.push(queueElement)
-                            console.log(`Неудачная попытка #${queueElement.attempt} обработки '${queueElement.project.path_with_namespace}', попробуем еще раз позже, осталось попыток ${this.onFailNetworkRetiesCount - queueElement.attempt}`)
-                        }
-                        break;
-                    case 'abort':
-                        return
-                }
-            }
+                } else
+                    await gitCliHandler.execute()
+            })
         }
     }
 

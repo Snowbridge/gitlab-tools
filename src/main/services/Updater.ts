@@ -2,41 +2,45 @@ import YAML from 'yaml'
 import { ProjectDTO } from "../common/DTO/Project";
 import { ParameterExpression } from "../common/ParameterExpression";
 import { GitlabApi } from "../infrastructure/clients/gitlab/Client";
+import { ProcessableElementsQueue } from '../common/ProcessableElementsQueue';
 
 export class Updater {
     private projects: ProjectDTO[]
     private expressions: ParameterExpression[]
     private gitlab: GitlabApi
+    private onError: 'skip' | 'retry' | 'abort'
+    private retriesCount: number
 
-    constructor(projects: ProjectDTO[], updateExpressions: ParameterExpression[], gitlab: GitlabApi) {
+    constructor(projects: ProjectDTO[], updateExpressions: ParameterExpression[], gitlab: GitlabApi, onError: 'skip' | 'retry' | 'abort', retriesCount: number) {
         this.projects = projects
         this.expressions = updateExpressions
         this.gitlab = gitlab
         this.expressions.sort((a: ParameterExpression, b: ParameterExpression) => a.getIndex() - b.getIndex())
+        this.onError = onError
+        this.retriesCount = retriesCount
     }
 
     async execute() {
-
         for (const project of this.projects) {
             // сначала выполнить все обработки в оперативе над копиями репозиториев
             for (const expression of this.expressions) {
                 process(project, expression)
-            }
+            }            
+        }
 
-            // а потом отправить на сервер данные репозитория
+        // а потом отправить на сервер данные репозитория в рамках обработки retriable queue
+        const queue = new ProcessableElementsQueue<ProjectDTO>(this.projects, this.onError, this.retriesCount)
+        queue.executeProcessing(async (project:ProjectDTO)=>{
             const metadata = project.yamlMetadata
             let description = [metadata.text.trim()]
             if (metadata.hasMetadata)
                 description.push(...['---', YAML.stringify(metadata.content)])
 
             let payload: Record<string, any> = {}
-            //payload.topics = project.topics.join(',')
             payload.description = description.join('\n').trim()
-            await this.gitlab.put(`/projects/${project.id}`, payload)
-        }
-
+            await this.gitlab.put(`/projects/${project.id}`, payload)            
+        })
     }
-
 }
 
 function process(project: ProjectDTO, expression: ParameterExpression) {

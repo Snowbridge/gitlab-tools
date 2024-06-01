@@ -38,7 +38,7 @@ export const builder = (yargs: yargs.Argv) => {
                     const content = parameter.getRightValue()
 
                     try {
-                        if(content != "")
+                        if (content != "")
                             parameter.setValue(YAML.parse(content))
                     } catch (error) {
                         throw Error(`Не корректный формат файла модели, ошибка ${error}`)
@@ -113,15 +113,17 @@ export const handler = async function (argv: any) {
             if (argv.dryRun)
                 printReport(result)
             else
-                updateProjects(result, argv.updateExpressions, argv.host, argv.token)
+                updateProjects(result, argv.updateExpressions, argv.host, argv.token, argv.onError, argv.retiesCount)
         })
 }
 
-function updateProjects(projects: ProjectDTO[], updateExpressions: ParameterExpression[], host: string, token: string) {
+function updateProjects(projects: ProjectDTO[], updateExpressions: ParameterExpression[], host: string, token: string, onError: 'skip' | 'retry' | 'abort', retiesCount: number) {
     const updater = new Updater(
         projects,
         updateExpressions,
-        new GitlabApi(host, token)
+        new GitlabApi(host, token),
+        onError,
+        retiesCount,
     ).execute()
         .then(() => { })
 }
