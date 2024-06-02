@@ -3,7 +3,7 @@
 import yargs from 'yargs/yargs'
 import 'dotenv/config'
 import path from 'path'
-
+import { coerce } from 'yargs';
 
 yargs(process.argv.slice(2))
     .options({
@@ -38,6 +38,22 @@ yargs(process.argv.slice(2))
             type: 'number',
             default: 3,
             hidden: true
+        },
+        log: {
+            desc: 'Имя файла, в который складываются логи',
+            type: 'string',
+            default: `${new Date().toISOString().replaceAll(':', '-')}.log`,
+            hidden: true,
+            coerce: (argv) => {
+                process.env.LOG_FILENAME = argv
+                return argv
+            }
+        },
+        debug: {
+            desc: 'Если передан флаг, то логи будут сыпаться в консоль',
+            hidden: true,
+            default: undefined,
+            type:'boolean'
         }
     })
     .commandDir(path.join('infrastructure', 'cli'))
@@ -45,6 +61,11 @@ yargs(process.argv.slice(2))
     .alias('help', ['h'])
     .showHidden('show-hidden', 'Show hidden options')
     .demandCommand(1)
+    .check((argv)=>{
+        if(!!argv.debug)
+            process.env.DEBUG = 'true'
+        return true
+    })
     .strict()
     .wrap(160)
     .parseAsync()

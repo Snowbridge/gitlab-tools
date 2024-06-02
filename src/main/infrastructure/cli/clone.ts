@@ -100,7 +100,7 @@ export const handler = async function (argv: any) {
                 argv.ltrimPath,
                 argv.existing,
                 argv.onError,
-                argv.retiesCount,
+                argv.retries,
                 argv.cloneFlags,
                 argv.fetchFlags,
                 argv.pullFlags

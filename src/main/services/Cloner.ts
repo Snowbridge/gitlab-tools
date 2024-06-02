@@ -14,13 +14,12 @@ export class GitCloner {
 
     private existingBehaviour: ExistingRepoBehaviour
     private directory: string
-    private projects: ProjectDTO[]
     private gitSshUrl: string
     private gitCloneFlags?: string
     private gitFetchFlags?: string
     private gitPullFlags?: string
     private ltrimPath: number
-    private queue: ProcessableElementsQueue<ProjectDTO>
+    private projects: ProcessableElementsQueue<ProjectDTO>
 
     constructor(
         baseSshUrl: string,
@@ -29,20 +28,19 @@ export class GitCloner {
         ltrimPath: number,
         existingBehaviour: ExistingRepoBehaviour = 'skip',
         onError: 'abort' | 'skip' | 'retry',
-        retiesCount: number,
+        retries: number,
         gitCloneFlags?: string,
         gitFetchFlags?: string,
         gitPullFlags?: string
     ) {
         this.gitSshUrl = `ssh://git@${baseSshUrl}`
-        this.projects = projects
         this.directory = Path.normalize(directory)
         this.ltrimPath = ltrimPath
         this.existingBehaviour = existingBehaviour
         this.gitCloneFlags = gitCloneFlags || ''
         this.gitFetchFlags = gitFetchFlags || '--all --prune --force'
         this.gitPullFlags = gitPullFlags || '--progress -v --no-rebase "origin"'
-        this.queue = new ProcessableElementsQueue<ProjectDTO>(projects, onError, retiesCount)
+        this.projects = new ProcessableElementsQueue<ProjectDTO>(projects, onError, retries)
     }
 
     async execute() {
@@ -52,8 +50,8 @@ export class GitCloner {
                 recursive: true
             })
 
-        while (this.queue.hasNext()) {
-            const element = this.queue.next()
+        while (this.projects.hasNext()) {
+            const element = this.projects.next()
             const project = element.value
 
             const gitPath = `${this.gitSshUrl}/${project.path_with_namespace}.git`
@@ -67,14 +65,15 @@ export class GitCloner {
                     { force: true, recursive: true }
                 )
 
-            this.queue.processElement(element, async (project) => {
-                const workingCopyAlreadyExists = fs.existsSync(Path.join(absoluteLocalPath, ".git"))
-                const gitCliHandler = this.gitHandlerFactory(workingCopyAlreadyExists, gitPath, absoluteLocalPath)
-                if (!gitCliHandler) {
-                    console.log('Склонирован ранее и пропущен ' + project.path_with_namespace)
-                } else
-                    await gitCliHandler.execute()
-            })
+            const workingCopyAlreadyExists = fs.existsSync(Path.join(absoluteLocalPath, ".git"))
+            const handler = this.gitHandlerFactory(workingCopyAlreadyExists, gitPath, absoluteLocalPath)
+            if (!!handler)
+                await this.projects.processElement(element, async (project) => {
+                    await handler.execute()
+                })
+            else
+                console.log('Склонирован ранее и пропущен ' + project.path_with_namespace)
+
         }
     }
 

@@ -113,17 +113,17 @@ export const handler = async function (argv: any) {
             if (argv.dryRun)
                 printReport(result)
             else
-                updateProjects(result, argv.updateExpressions, argv.host, argv.token, argv.onError, argv.retiesCount)
+                updateProjects(result, argv.updateExpressions, argv.host, argv.token, argv.onError, argv.retries)
         })
 }
 
-function updateProjects(projects: ProjectDTO[], updateExpressions: ParameterExpression[], host: string, token: string, onError: 'skip' | 'retry' | 'abort', retiesCount: number) {
+function updateProjects(projects: ProjectDTO[], updateExpressions: ParameterExpression[], host: string, token: string, onError: 'skip' | 'retry' | 'abort', retries: number) {
     const updater = new Updater(
         projects,
         updateExpressions,
         new GitlabApi(host, token),
         onError,
-        retiesCount,
+        retries,
     ).execute()
         .then(() => { })
 }
