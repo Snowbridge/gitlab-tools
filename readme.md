@@ -134,3 +134,34 @@ $ gitlab-tools clone -d ./ --qm $.repo-metadata.zones!=zone-a --qm $.repo-metada
 # NB! плюсы в параметрах командной строки заменяются на пробелы (ну, просто потому что вот так вот я решил)
 $ gitlab-tools report --qm $..nested-key!=cryptic+value
 ```
+
+## Usage example
+
+Вот такой скрипт вытащит весь А.Финанс и разложит по папкам:
+
+```bash
+echo "./100-Main/"
+gitlab-tools clone --dir ./100-Main/ --existing fetch --trim 1 --qp farzoom/afinance/ farzoom/common/ farzoom/afinance-poas-system/ farzoom/afinance-rate/ farzoom/afinance-spr/ farzoom/afinance-tmpl-system/
+
+echo "./200-Documentation/"
+gitlab-tools clone --dir ./200-Documentation/ --existing fetch --trim 2 --qp farzoom/documentation/
+
+echo "./300-Configs/"
+gitlab-tools clone --dir ./200-Configs/ --existing fetch --trim 2 --qp farzoom/configs/
+
+echo "./400-Testing/"
+gitlab-tools clone --dir ./300-Testing/ --existing fetch --trim 2 --qp farzoom/autotests/
+
+echo "./500-Infra/"
+gitlab-tools clone --dir ./400-Infra/ --existing fetch --trim 1 --qp farzoom/afinance-2.0/ farzoom/devops/
+
+echo "./800-Legacy/"
+gitlab-tools clone --dir ./800-Legacy/ --existing fetch --trim 2 --qp farzoom/legacy/
+
+echo "./900-Personal/"
+gitlab-tools clone --dir ./900-Personal/ --existing fetch -q owned=true
+
+echo "Done"
+```
+
+С последним пунктом внимательнее, т.к. это не именно личные, а все, у кого вы `owner`. Хотя беды и не будет, конечно.
