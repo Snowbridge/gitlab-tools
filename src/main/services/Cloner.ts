@@ -1,5 +1,5 @@
 
-
+import ora, { Ora } from 'ora'
 import * as fs from 'fs'
 import { ProjectDTO } from '../common/DTO/Project'
 import * as Path from 'node:path'
@@ -18,14 +18,14 @@ export class GitCloner {
     private gitCloneFlags?: string
     private gitFetchFlags?: string
     private gitPullFlags?: string
-    private ltrimPath: number
+    private trimPath: number
     private projects: ProcessableElementsQueue<ProjectDTO>
 
     constructor(
         baseSshUrl: string,
         projects: ProjectDTO[],
         directory: string,
-        ltrimPath: number,
+        trimPath: number,
         existingBehaviour: ExistingRepoBehaviour = 'skip',
         onError: 'abort' | 'skip' | 'retry',
         retries: number,
@@ -35,7 +35,7 @@ export class GitCloner {
     ) {
         this.gitSshUrl = `ssh://git@${baseSshUrl}`
         this.directory = Path.normalize(directory)
-        this.ltrimPath = ltrimPath
+        this.trimPath = trimPath
         this.existingBehaviour = existingBehaviour
         this.gitCloneFlags = gitCloneFlags || ''
         this.gitFetchFlags = gitFetchFlags || '--all --prune --force'
@@ -56,6 +56,7 @@ export class GitCloner {
 
             const gitPath = `${this.gitSshUrl}/${project.path_with_namespace}.git`
             const absoluteLocalPath = this.getProjectAbsoluteLocalPath(project)
+            const spinner = ora(`${element.value.name_with_namespace}`).start()
 
             fs.mkdirSync(absoluteLocalPath, { recursive: true }) // если это свалится, то ретраить ничего не будем
 
@@ -70,6 +71,7 @@ export class GitCloner {
             if (!!handler)
                 await this.projects.processElement(element, async (project) => {
                     await handler.execute()
+                    spinner.succeed()
                 })
             else
                 console.log('Склонирован ранее и пропущен ' + project.path_with_namespace)
@@ -84,7 +86,7 @@ export class GitCloner {
             ),
             project.path_with_namespace
                 .split('/')
-                .slice(this.ltrimPath)
+                .slice(this.trimPath)
                 .join('/')
         )
     }

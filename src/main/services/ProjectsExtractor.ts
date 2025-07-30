@@ -3,6 +3,7 @@ import { GitlabApi } from "../infrastructure/clients/gitlab/Client";
 import { ProjectDTO } from "../common/DTO/Project";
 import YAML from 'yaml'
 import { ParameterExpression } from "../common/ParameterExpression";
+import ora from "ora"
 
 export class ProjectsExtractor {
     private queryExpressions: ParameterExpression[]
@@ -14,6 +15,8 @@ export class ProjectsExtractor {
     }
 
     async extract(): Promise<ProjectDTO[]> {
+
+        const spinner = ora('Получение списка репозиториев...').start()
 
         let gitProjects: GitlabProjectDTO[] = await this.client.getProjects(this.queryExpressions)
 
@@ -40,6 +43,8 @@ export class ProjectsExtractor {
                 })
             )
         }
+    
+        spinner.succeed(`Получено ${projects.length} репозиториев`)
 
         return projects
     }

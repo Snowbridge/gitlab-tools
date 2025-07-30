@@ -3,6 +3,7 @@ import { ProjectDTO } from "../common/DTO/Project";
 import { ParameterExpression } from "../common/ParameterExpression";
 import { GitlabApi } from "../infrastructure/clients/gitlab/Client";
 import { ProcessableElementsQueue } from '../common/ProcessableElementsQueue';
+import ora from 'ora'
 
 export class Updater {
     private projects: ProjectDTO[]
@@ -31,6 +32,7 @@ export class Updater {
         // а потом отправить на сервер данные репозитория в рамках обработки retriable queue
         const queue = new ProcessableElementsQueue<ProjectDTO>(this.projects, this.onError, this.retriesCount)
         queue.executeProcessing(async (project:ProjectDTO)=>{
+            const spinner = ora(`${project.name_with_namespace}`).start()
             const metadata = project.yamlMetadata
             let description = [metadata.text.trim()]
             if (metadata.hasMetadata)
@@ -38,7 +40,8 @@ export class Updater {
 
             let payload: Record<string, any> = {}
             payload.description = description.join('\n').trim()
-            await this.gitlab.put(`/projects/${project.id}`, payload)            
+            await this.gitlab.put(`/projects/${project.id}`, payload)
+            spinner.succeed()
         })
     }
 }
