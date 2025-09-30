@@ -20,6 +20,7 @@ export class GitCloner {
     private gitPullFlags?: string
     private trimPath: number
     private projects: ProcessableElementsQueue<ProjectDTO>
+    private onError: 'abort' | 'skip' | 'retry'
 
     constructor(
         baseSshUrl: string,
@@ -41,6 +42,7 @@ export class GitCloner {
         this.gitFetchFlags = gitFetchFlags || '--all --prune --force'
         this.gitPullFlags = gitPullFlags || '--progress -v --no-rebase "origin"'
         this.projects = new ProcessableElementsQueue<ProjectDTO>(projects, onError, retries)
+        this.onError = onError
     }
 
     async execute() {
@@ -50,13 +52,10 @@ export class GitCloner {
                 recursive: true
             })
 
-        while (this.projects.hasNext()) {
-            const element = this.projects.next()
-            const project = element.value
-
+        await this.projects.executeProcessing(async (project) => {
             const gitPath = `${this.gitSshUrl}/${project.path_with_namespace}.git`
             const absoluteLocalPath = this.getProjectAbsoluteLocalPath(project)
-            const spinner = ora(`${element.value.name_with_namespace}`).start()
+            const spinner = ora(`${project.name_with_namespace}`).start()
 
             fs.mkdirSync(absoluteLocalPath, { recursive: true }) // если это свалится, то ретраить ничего не будем
 
@@ -68,15 +67,14 @@ export class GitCloner {
 
             const workingCopyAlreadyExists = fs.existsSync(Path.join(absoluteLocalPath, ".git"))
             const handler = this.gitHandlerFactory(workingCopyAlreadyExists, gitPath, absoluteLocalPath)
-            if (!!handler)
-                await this.projects.processElement(element, async (project) => {
-                    await handler.execute()
-                    spinner.succeed()
-                })
-            else
-                console.log('Склонирован ранее и пропущен ' + project.path_with_namespace)
-
-        }
+            if (!!handler) {
+                await handler.execute()
+                spinner.succeed()    
+            } else{
+                spinner.suffixText = '(был склонирован ранее и пропущен)'
+                spinner.succeed()
+            }
+        })
     }
 
     private getProjectAbsoluteLocalPath(project: ProjectDTO): string {
