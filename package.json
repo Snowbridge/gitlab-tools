@@ -4,7 +4,9 @@
   "description": "",
   "main": "./build/main/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "lint": "eslint ./src/** --fix",
     "install-globally": "npm install && npm run rebuild && npm install -g ./",
     "rebuild": "rm -Rf ./build/* && tsc && chmod +x ./build/main/index.js && touch .env"
@@ -27,12 +29,15 @@
   },
   "devDependencies": {
     "@types/axios": "^0.14.0",
+    "@types/jest": "^30.0.0",
     "@types/jsonpath": "^0.2.4",
     "@types/node": "^20.12.2",
     "@types/yargs": "^17.0.32",
     "@typescript-eslint/eslint-plugin": "^7.4.0",
     "@typescript-eslint/parser": "^7.4.0",
     "eslint": "^8.57.0",
+    "jest": "^30.1.3",
+    "ts-jest": "^29.4.4",
     "typescript": "^5.4.3"
   }
 }
