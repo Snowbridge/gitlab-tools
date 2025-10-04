@@ -3,7 +3,7 @@
 import yargs from 'yargs/yargs'
 import 'dotenv/config'
 import path from 'path'
-import { coerce } from 'yargs';
+import SpecialSymbolsMapping from './common/SpecialSymbolsMapping';
 
 yargs(process.argv.slice(2))
     .options({
@@ -53,16 +53,25 @@ yargs(process.argv.slice(2))
             desc: 'Если передан флаг, то логи будут сыпаться в консоль',
             hidden: true,
             default: undefined,
-            type:'boolean'
+            type: 'boolean'
         }
     })
     .commandDir(path.join('infrastructure', 'cli'))
     .scriptName('gitlab-tools')
     .alias('help', ['h'])
     .showHidden('show-hidden', 'Show hidden options')
+    .epilogue([
+        'В параметрах и опциях, где допускаются регулярные выражения,',
+        'для исключения конфликтов с управляющими символами shell действуют следующие символы замены:',
+        SpecialSymbolsMapping.map(it => `${it.replacement}‥${it.symbol}`).join(', '),
+        'то есть, чтобы найти всё в группе `myapp` за минусом того, что в группе `legacy`,',
+        'следует вместо `--qp "^myapp\/(?!legacy).*$"` нужно передать `--qp "^myapp\/⟮?¡legacy⟯.*฿"`'
+
+    ].join('\t\n')
+    )
     .demandCommand(1)
-    .check((argv)=>{
-        if(!!argv.debug)
+    .check((argv) => {
+        if (!!argv.debug)
             process.env.DEBUG = 'true'
         return true
     })
