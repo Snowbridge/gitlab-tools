@@ -56,7 +56,7 @@ export const builder = (yargs: yargs.Argv) => {
                     `Значение параметра передается так: --pull-flags="--one val123 -t -w -o --three"`
                 ].join('\n\t'),
                 type: 'string',
-                default: '--progress -v --no-rebase "origin"'
+                default: '--progress -v --no-rebase'
             },
             'ltrim-path': {
                 type: 'number',

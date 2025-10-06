@@ -142,44 +142,37 @@ $ gitlab-tools report --qm $..nested-key!=cryptic+value
 Если вот такой скрипт сложить в файл, например, `afinance.sh`, то при первом запуске он вытащит весь А.Финанс и разложит по папкам, а при всех последдующих будет клонить недостающие, а существующие будет фетчить:
 
 ```bash
-echo "./100-Main/"
-gitlab-tools clone --dir ./100-Main/ --existing fetch --trim 1 --qp farzoom/afinance/ farzoom/common/ farzoom/afinance-poas-system/ farzoom/afinance-rate/ farzoom/afinance-spr/ farzoom/afinance-tmpl-system/
+#!/bin/bash
 
-echo "./200-Documentation/"
-gitlab-tools clone --dir ./200-Documentation/ --existing fetch --trim 2 --qp farzoom/documentation/
+echo "application codebase"
+gitlab-tools clone --dir ./app --qp ^farzoom/afinance/\(?\!fz-\).* --trim 2  --existing pull
+gitlab-tools clone --dir ./app/common --qp ^farzoom/common/\(?\!fz-\).* --trim 2  --existing pull
+gitlab-tools clone --dir ./app/poas-system --qp farzoom/afinance-poas-system --trim 2  --existing pull
+gitlab-tools clone --dir ./app/rate --qp farzoom/afinance-rate --trim 2  --existing pull
+gitlab-tools clone --dir ./app/spr --qp farzoom/afinance-spr --trim 2  --existing pull
+gitlab-tools clone --dir ./app/tmpl-system --qp farzoom/afinance-tmpl-system --trim 2  --existing pull
 
-echo "./300-Configs/"
-gitlab-tools clone --dir ./200-Configs/ --existing fetch --trim 2 --qp farzoom/configs/
+echo "libraries"
+gitlab-tools clone --dir ./libs --qp ^farzoom/afinance/fz-.* ^farzoom/common/fz-.* --trim 2 --existing pull
 
-echo "./400-Testing/"
-gitlab-tools clone --dir ./300-Testing/ --existing fetch --trim 2 --qp farzoom/autotests/
-
-echo "./500-Infra/"
-gitlab-tools clone --dir ./400-Infra/ --existing fetch --trim 1 --qp farzoom/afinance-2.0/ farzoom/devops/
-
-echo "./800-Legacy/"
-gitlab-tools clone --dir ./800-Legacy/ --existing fetch --trim 2 --qp farzoom/legacy/
-
-echo "./900-Personal/"
-gitlab-tools clone --dir ./900-Personal/ --existing fetch -q owned=true
-
-echo "Done"
+echo "other"
+gitlab-tools clone --dir ./ --qp ^farzoom/\(autotests\|configs\|devops\|documentation\|templates\|tools\|data-models\) --trim 1 --existing pull
 ```
 
 С последним пунктом внимательнее, т.к. это не именно личные, а все, у кого вы `owner`. Хотя беды и не будет, конечно.
 
 ## Рэгэкспы в командной строке
 
-Некоторые опции и команды, наример `--query-path` позволяют оперировать регэкспами. Однако некоторые символы, используемые в регэкспах, являются управляющими для shell, поэтому при использовании регэкспов необходимо эти управляющие символы подменять на безопасные аналоги:
+Некоторые опции и команды, наример `--query-path` позволяют оперировать регэкспами. Однако некоторые символы, используемые в регэкспах, являются управляющими для shell, поэтому при использовании регэкспов необходимо эти управляющие символы экранировать.
+
+
 
 | Управляющий символ | Замена |
 |--------------------|--------|
-| `!`                | `¡`    |
-| `-`                | `⊸`    |
-| `-`                | `⌁`    |
-| `(`                | `⟮`    |
-| `)`                | `⟯`    |
-| `;`                | `⁏`    |
-| `$`                | `฿`    |
+| `!`                | `\!`    |
+| `(`                | `\(`    |
+| `)`                | `\)`    |
+| `;`                | `\;`    |
+| `$`                | `\$`    |
 
-Например, вместо `--qp adapter$` нужно передавать `--qp adapter฿`, вместо `--qp ^farzoom\/common\/(?!fz-).*` — `--qp ^farzoom\/common\/⟮?¡fz-⟯.*`
+Например, вместо `--qp adapter$` нужно передавать `--qp adapter\$`, вместо `--qp ^farzoom/common/(?!fz-).*` — `--qp ^farzoom/common/\(?\!fz-\).*`

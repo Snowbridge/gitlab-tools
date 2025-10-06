@@ -22,9 +22,9 @@ export class ProcessableElementsQueue<T = any> {
      * @param valueNameingCallback - a function that returns the human-readable representation of the value for the logs
      */
     constructor(values: T[], onError: 'abort' | 'retry' | 'skip', retriesCount: number, valueNamingCallback?: (value: T) => string) {
-        const defaultNamingCallback = (it:any)=>{
-            if(!it) return 'unknown'
-            if(it.name) return it.name
+        const defaultNamingCallback = (it: any) => {
+            if (!it) return 'unknown'
+            if (it.name) return it.name
             return JSON.stringify(it, undefined, '').slice(0, 16)
         }
         this.processableElements = values.map(it => {
@@ -55,18 +55,30 @@ export class ProcessableElementsQueue<T = any> {
             await callback(element.value)
             this.logger.info(`Attempt # ${element.attempt} on ${element.name} successful`)
         } catch (error: any) {
-            if(this.onError == 'retry')
-                if(this.retriesCount >= element.attempt){
+            if (this.onError == 'retry')
+                if (this.retriesCount >= element.attempt) {
                     this.processableElements.push(element)
-                    this.logger.info(`Failed attempt # ${element.attempt}, pushing ${element.name} back to queue`)
-                }else{
-                    this.logger.warn(`The ${element.name} is unprocessable, all ${element.attempt} attempt failed, the element is skipped`)
+                    this.logger.info({
+                        message: `Failed attempt # ${element.attempt}, pushing ${element.name} back to queue`,
+                        error: error
+                    })
+                } else {
+                    this.logger.warn({
+                        message: `The ${element.name} is unprocessable, all ${element.attempt} attempt failed, the element is skipped`,
+                        error: error
+                    })
                 }
-            else if(this.onError == 'abort'){
-                this.logger.error(`aborting execution`)
+            else if (this.onError == 'abort') {
+                this.logger.error({
+                    message: `aborting execution`,
+                    error: error
+                })
                 throw error
-            }else{
-                this.logger.warn(`The ${element.name} is unprocessable, skipped`)
+            } else {
+                this.logger.warn({
+                    message: `The ${element.name} is unprocessable, skipped`,
+                    error: error
+                })
             }
         }
     }

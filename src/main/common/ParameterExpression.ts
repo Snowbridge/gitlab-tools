@@ -1,5 +1,4 @@
 import * as fs from 'fs'
-import SpecialSymbolsMapping from './SpecialSymbolsMapping'
 
 function* generator() {
     let current = Math.random()
@@ -81,10 +80,6 @@ export class QueryPathExpression extends ParameterExpression {
         super(line)
         this.leftValue = ':path'
         this.operator = '@'
-        // для query-path доступен регэксп, тут надо подменить замены
-        SpecialSymbolsMapping.forEach(it => {
-            line = line.replaceAll(it.symbol, it.replacement)
-        })
         this.rightValue = line
     }
 }
