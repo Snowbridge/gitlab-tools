@@ -57,6 +57,14 @@ export class GitCloner {
             const absoluteLocalPath = this.getProjectAbsoluteLocalPath(project)
             const spinner = ora(`${project.name_with_namespace}`).start()
 
+            if(project.repository_access_level.toLocaleLowerCase() == 'disabled'){
+                spinner.stopAndPersist({
+                    suffixText: "в проекте отсутствует репозиторий, пропущен",
+                    symbol:'〰️'
+                })
+                return
+            }
+
             fs.mkdirSync(absoluteLocalPath, { recursive: true }) // если это свалится, то ретраить ничего не будем
 
             if (this.existingBehaviour == 'drop') //в случае, если папка пуста, мы ничего не теряем
