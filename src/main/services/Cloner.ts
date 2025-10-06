@@ -79,8 +79,10 @@ export class GitCloner {
                 await handler.execute()
                 spinner.succeed()    
             } else{
-                spinner.suffixText = '(был склонирован ранее и пропущен)'
-                spinner.succeed()
+                spinner.stopAndPersist({
+                    suffixText: "был склонирован ранее и пропущен",
+                    symbol:'〰️'
+                })
             }
         })
     }
