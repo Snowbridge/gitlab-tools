@@ -1,4 +1,5 @@
 import * as Path from 'node:path'
+import os from 'node:os'
 import winston from "winston"
 
 export default (parent: Function) => {
@@ -14,7 +15,7 @@ export default (parent: Function) => {
                     winston.format.timestamp()
                 ),
                 filename: Path.join(
-                    '.',
+                    Path.resolve(os.tmpdir()),
                     `${process.env.LOG_FILENAME || (Math.random() * 100).toString(36).replace('.', '')}.json`
                 )
             }),

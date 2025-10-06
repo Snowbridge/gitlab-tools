@@ -42,7 +42,7 @@ yargs(process.argv.slice(2))
         log: {
             desc: 'Имя файла, в который складываются логи',
             type: 'string',
-            default: `${new Date().toISOString().replaceAll(':', '-')}.log`,
+            default: `gitlab-tools-${new Date().toISOString().replaceAll(':', '-')}.log`,
             hidden: true,
             coerce: (argv) => {
                 process.env.LOG_FILENAME = argv
