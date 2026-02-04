@@ -41,7 +41,7 @@ export class GitCloner {
         this.gitCloneFlags = gitCloneFlags || ''
         this.gitFetchFlags = gitFetchFlags || '--all --prune --force'
         this.gitPullFlags = gitPullFlags || '--progress -v --no-rebase "origin"'
-        this.projects = new ProcessableElementsQueue<ProjectDTO>(projects, onError, retries)
+        this.projects = new ProcessableElementsQueue<ProjectDTO>(projects, onError, retries, (project)=>{return project.path_with_namespace})
         this.onError = onError
     }
 
@@ -55,13 +55,9 @@ export class GitCloner {
         await this.projects.executeProcessing(async (project) => {
             const gitPath = `${this.gitSshUrl}/${project.path_with_namespace}.git`
             const absoluteLocalPath = this.getProjectAbsoluteLocalPath(project)
-            const spinner = ora(`${project.name_with_namespace}`).start()
 
             if(project.repository_access_level.toLocaleLowerCase() == 'disabled'){
-                spinner.stopAndPersist({
-                    suffixText: "в проекте отсутствует репозиторий, пропущен",
-                    symbol:'〰️'
-                })
+                console.log(` 〰️ ${project.name} в проекте отсутствует репозиторий, пропущен`)
                 return
             }
 
@@ -77,12 +73,8 @@ export class GitCloner {
             const handler = this.gitHandlerFactory(workingCopyAlreadyExists, gitPath, absoluteLocalPath)
             if (!!handler) {
                 await handler.execute()
-                spinner.succeed()    
             } else{
-                spinner.stopAndPersist({
-                    suffixText: "был склонирован ранее и пропущен",
-                    symbol:'〰️'
-                })
+                console.log(` 〰️ ${project.name} был склонирован ранее и пропущен`)
             }
         })
     }

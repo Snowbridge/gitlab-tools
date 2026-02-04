@@ -28,7 +28,7 @@ yargs(process.argv.slice(2))
         },
         'on-error': {
             desc: 'Что делать при возникновении исключений, применяется к ошибкам работы с REST и некоторым другим.',
-            choice: ['retry', 'abort', 'skip'],
+            choices: ['retry', 'abort', 'skip'],
             default: 'retry',
             hidden: true
         },
