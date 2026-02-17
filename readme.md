@@ -35,7 +35,7 @@ $ gitlab-tools clone -d ./repos -q archived=false -q search=dictionary -q topic=
 Это самы простой и надежный вариант с единственным нюансом - скрипт будет доступен только из каталога, в который он установлен.
 
 ```bash
-$ git pull git@git.a-fin.tech:l.sadovsky/gitlab-tools.git
+$ git pull git@github.com:Snowbridge/gitlab-tools.git
 $ cd ./gitlab-tools # скрипт будет жить в этом каталоге
 $ mkdir out # команда report будет сюда складывать json-отчеты
 $ npm install
@@ -87,7 +87,7 @@ export GITLAB_TOKEN="TC79o8Y6wqr4DAubzrYP"
 
 ```bash
 #  клоним репу, как обычно
-$ git pull git@git.a-fin.tech:l.sadovsky/gitlab-tools.git
+$ git pull git@github.com:Snowbridge/gitlab-tools.git
 $ cd ./gitlab-tools 
 # собираем образ
 #   аргументы TOKEN и HOST не обязательны, но, если их не указать, то потом при запуске контейнера придется все время из в командной строке передавать
