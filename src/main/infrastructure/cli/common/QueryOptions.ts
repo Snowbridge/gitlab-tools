@@ -2,7 +2,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { ProjectDTO } from '../../../common/DTO/Project'
 import yargs from 'yargs'
-import { QueryAttributeExpression, QueryMetadataExpression, ParameterExpression, QueryNameExpression, QueryPathExpression } from '../../../common/ParameterExpression'
+import { QueryAttributeExpression, ParameterExpression, QueryNameExpression, QueryPathExpression } from '../../../common/ParameterExpression'
 
 export default (yargs: yargs.Argv, makeHidden = false) => {
     return yargs
@@ -21,20 +21,6 @@ export default (yargs: yargs.Argv, makeHidden = false) => {
                 ].join('\n\t'),
                 hidden: makeHidden,
                 coerce: (argv: string[]) => argv.map(it => new QueryAttributeExpression(it))
-            },
-            qm: {
-                desc: [
-                    'Отбор по YAML-метаданным из описания проекта --qm <key>=<value>',
-                    '<key> - это ключ YAML-структуры в формате JSONPath, то есть `--qm $.some.nested-key=42` достанет все проекты, у которых в ямле',
-                    '\tкорневой элемент - `some`, у него подчиненный `nested-key` в котором лежит число 42',
-                    '\tподробно с примером это описано в reamde.md',
-                    'Доступны два операторы сравнения: \`=\` и \`!=\`, для массивов "равно" и "не равно" обрабатываются, как "содержит" и "не содержит"',
-                ].join('\n\t'),
-                array: true,
-                alias: ['query-metadata'],
-                type: 'string',
-                hidden: makeHidden,
-                coerce: (argv: string[]) => argv.map(it => new QueryMetadataExpression(it))
             },
             qp: {
                 desc: [
@@ -112,7 +98,6 @@ function collectAllQueryExpressions(argv: any): void {
 
     [
         argv.q,
-        argv.qm,
         argv.qn,
         argv.qp
     ].forEach(it => { if (Array.isArray(it)) expressions.push(...it) })

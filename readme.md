@@ -6,8 +6,7 @@
 
 1. Отчеты по репозиториям с гибкими отборами по содержимому
 2. Пакетное клонирование по списку или по результатам отборов
-3. Добавляет метаданные репозиториям в виде yaml-фрагмента в `Description`
-4. Манипулирование вебхуками
+3. Манипулирование вебхуками
 
 [[_TOC_]]
 
@@ -102,41 +101,6 @@ $ docker build -t gitlab-tools-afin --build-arg TOKEN=${your-gitlab-token} --bui
 $ docker run --rm gitlab-tools-afin gitlab-tools report -q search=bg-pa
 ```
 
-## Пример использования отбора по метаданным
-
-Предположим, у нас в описаниях репозиториев содержится YAML с ниже описанной структурой:
-
-```yaml
-repo-metadata:
-    type: service
-    team: TeamA
-    zones:
-        - zone-a
-        - zone-f
-    some:
-        deeply:
-            nested-key: cryptic value
-    not-so-deeply:
-        nested-key: some long line of text with spaces
-```
-
-```bash
-# склонировать в каталог `./zone-f-repos` все репы, у которых есть значение `zone-f` в коллекции `repo-metadata.zones`
-$ gitlab-tools clone -d ./zone-f-repos --qm $.repo-metadata.zones=zone-f
-
-# вывести на консоль все репы, у которых `repo-metadata.team` содержит что угодно, кроме `TeamB`
-$ gitlab-tools report --qm $.repo-metadata.team!=TeamB
-
-# фильтры объединяются по ИЛИ, то есть вот это склонирует в текущую папку все репы, у которых (одновременно)
-# `repo-metadata.zones` не содержит `zone-a`, а так же все репы, у которых `repo-metadata.team` содержит `TeamA`
-$ gitlab-tools clone -d ./ --qm $.repo-metadata.zones!=zone-a --qm $.repo-metadata.team=TeamA
-
-# Этот запрос соберет все проекты, у которых в ключах `nested-key` на любом уровне вложенности содержится
-# что угодно, кроме строки 'cryptic value'
-# NB! плюсы в параметрах командной строки заменяются на пробелы (ну, просто потому что вот так вот я решил)
-$ gitlab-tools report --qm $..nested-key!=cryptic+value
-```
-
 ## Usage example
 
 Если вот такой скрипт сложить в файл, например, `afinance.sh`, то при первом запуске он вытащит весь А.Финанс и разложит по папкам, а при всех последдующих будет клонить недостающие, а существующие будет фетчить:
@@ -164,7 +128,6 @@ gitlab-tools clone --dir ./ --qp ^farzoom/\(autotests\|configs\|devops\|document
 ## Рэгэкспы в командной строке
 
 Некоторые опции и команды, наример `--query-path` позволяют оперировать регэкспами. Однако некоторые символы, используемые в регэкспах, являются управляющими для shell, поэтому при использовании регэкспов необходимо эти управляющие символы экранировать.
-
 
 
 | Управляющий символ | Замена |

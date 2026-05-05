@@ -1,7 +1,6 @@
 import { GitlabProjectDTO } from "../common/DTO/Gitlab/ProjectDTO";
 import { GitlabApi } from "../infrastructure/clients/gitlab/Client";
 import { ProjectDTO } from "../common/DTO/Project";
-import YAML from 'yaml'
 import { ParameterExpression } from "../common/ParameterExpression";
 import ora from "ora"
 
@@ -26,55 +25,8 @@ export class ProjectsExtractor {
             gitProjects = gitProjects.filter((repo: { path_with_namespace: string }) =>
                 pathsFilters.some(expr => new RegExp(expr.getRightValue()).test(repo.path_with_namespace)))
 
-        let projects = convertProjects(gitProjects)
+        spinner.succeed(`Получено ${gitProjects.length} репозиториев`)
 
-        const metadataFilters = this.queryExpressions.filter(it => it.getType() == 'QueryMetadataExpression')
-
-        if (metadataFilters.length) { // есть фильтры по метаданным
-            const jp = require('jsonpath')
-            projects = projects.filter(p =>
-                metadataFilters.some(exp => {
-                    const result: string[] = jp.query(p.yamlMetadata.content, exp.getLeftValue())
-                    if(!result.length)
-                        return false
-
-                    const includes = result.includes(exp.getRightValue())
-                    return exp.getOperator() == '!=' ? !includes : includes
-                })
-            )
-        }
-    
-        spinner.succeed(`Получено ${projects.length} репозиториев`)
-
-        return projects
+        return gitProjects
     }
-}
-
-function convertProjects(giltabProjects: GitlabProjectDTO[]): ProjectDTO[] {
-    const projects = giltabProjects.map(it =>
-        Object.assign(it,
-            {
-                yamlMetadata: {
-                    hasMetadata: false,
-                    content: {},
-                    text: ""
-                }
-            }
-        ) as ProjectDTO)
-
-    for (const project of projects) {
-        if(!project.description)
-            continue
-        
-        project.yamlMetadata.text = project.description
-        
-        const descriptionData = project.description.split('---')
-        project.yamlMetadata.hasMetadata = descriptionData.length > 1
-        if (project.yamlMetadata.hasMetadata) {
-            project.yamlMetadata.text = descriptionData[0]
-            project.yamlMetadata.content = YAML.parse(`---${descriptionData[1]}`)
-        }
-    }
-
-    return projects
 }

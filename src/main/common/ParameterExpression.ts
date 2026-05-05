@@ -33,7 +33,7 @@ export abstract class ParameterExpression {
 
         this.leftValue = tokens[1]
         this.operator = tokens[2] as ParameterExpressionOperator || '='
-        this.rightValue = `${tokens[3] || tokens[1]}`.replaceAll('+', ' ') // на случай пустого регэспа или регэкспа с количеством групп меньше 3
+        this.rightValue = `${tokens[3] || tokens[1]}`.replaceAll('+', ' ') // на случай пустого регэкспа или регэкспа с количеством групп меньше 3
     }
 
     getType() { return this.constructor.name }
@@ -52,11 +52,6 @@ export class QueryAttributeExpression extends ParameterExpression {
     // -q owned=true topics=qwe,rty
     getRegexp(): RegExp { return /^([a-z|0-9|_]+)(=)([^\s]+)$/i }
 
-}
-
-export class QueryMetadataExpression extends ParameterExpression {
-    // --qm $.repo-metadata.zones=zone-f
-    getRegexp(): RegExp { return /^(\$[a-z|0-9|.|\-|@|?|*|[|\]|,|_]+)(=|!=)([^\s]+)$/ }
 }
 
 export class QueryNameExpression extends ParameterExpression {
@@ -82,47 +77,6 @@ export class QueryPathExpression extends ParameterExpression {
         this.operator = '@'
         this.rightValue = line
     }
-}
-
-export class UpdateMetadataKeyExpression extends ParameterExpression {
-    // -k repo-metadata.team=team:Persimon
-    getRegexp(): RegExp { return /^([a-z|0-9|.|\-|@|?|*|[|\]|,|_]+)(=)([^\s]+)$/ }
-}
-
-export class UpdateMetadataModelExpression extends ParameterExpression {
-    // --model ./path/to/model.yaml
-    getRegexp(): RegExp { return /^.+$/i }
-
-    constructor(line: string) {
-        super(line)
-        this.leftValue = ':model'
-        this.operator = '='
-
-        if (!fs.existsSync(line))
-            throw Error(`Файл не существует ${line}`)
-
-        this.rightValue = fs.readFileSync(line, 'utf-8')
-    }
-}
-
-export class UpdateMetadataArrayPushExpression extends ParameterExpression {
-    // --push repo-metadata.zones@zone-to-insert
-    getRegexp(): RegExp { return /^([a-z|0-9|.|\-|@|?|*|[|\]|,|_]+)(@)([^\s]+)$/ }
-}
-
-export class UpdateMetadataArrayRemoveExpression extends ParameterExpression {
-    // --remove repo-metadata.zones@zone-to-remove
-    getRegexp(): RegExp { return /^([a-z|0-9|.|\-|@|?|*|[|\]|,|_]+)(@)([^\s]+)$/ }
-}
-
-export class UpdateMetadataArrayClearExpression extends ParameterExpression {
-    // --clear repo-metadata.zones
-    getRegexp(): RegExp { return /^([a-z|0-9|.|\-|@|?|*|[|\]|,|_]+)$/ }
-}
-
-export class UpdateMetadataDropKeyExpression extends ParameterExpression {
-    // --drop repo-metadata.zones
-    getRegexp(): RegExp { return /^([a-z|0-9|.|\-|@|?|*|[|\]|,|_]+)$/ }
 }
 
 //TODO: add topics attribute
