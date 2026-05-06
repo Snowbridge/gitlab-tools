@@ -49,15 +49,6 @@ export default (yargs: yargs.Argv, makeHidden = false) => {
                 coerce: coerceParameterQueryNames
             }
         })
-        .options({
-            output: {
-                desc: 'Способ вывода отобранных проектов - на консоль или json-файл в текущий каталог',
-                choices: ['json', 'console'],
-                alias: ['o'],
-                default: 'console',
-                hidden: makeHidden
-            }
-        })
         .middleware(collectAllQueryExpressions, false)
         .hide('token')
         .hide('host')
