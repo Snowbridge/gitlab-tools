@@ -39,6 +39,10 @@ export class GitlabApi extends BaseAxiosClient {
         return projects
     }
 
+    async updateProjectData(projectId: number, data: Partial<GitlabProjectDTO>): Promise<void> {
+        await this.put<void>(`/projects/${projectId}`, data)
+    }
+
     private async getTotalPages(url: string, config?: AxiosRequestConfig): Promise<number> {
         let { headers } = await this.head(url, config)
         return headers['x-total-pages'] || 1
