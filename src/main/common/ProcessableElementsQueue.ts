@@ -59,7 +59,8 @@ export class ProcessableElementsQueue<T = any> {
             this.logger.info(`Attempt # ${element.attempt} on ${element.name} successful`)
             spinner.succeed()
         } catch (error: any) {
-            this.logger.info(error.error.message)
+            const errMsg = error?.error?.message ?? error?.message ?? String(error)
+            this.logger.info(errMsg)
             if (this.onError == 'retry')
                 if (this.retriesCount >= element.attempt) {
                     spinner.fail(`${element.name} failed attempt ${element.attempt} of ${this.retriesCount}`)

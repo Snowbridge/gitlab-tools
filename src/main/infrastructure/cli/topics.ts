@@ -1,8 +1,8 @@
-import yargs, { string } from 'yargs'
+import yargs from 'yargs'
 import QueryOptions from './common/QueryOptions';
 import { ProjectsExtractor } from '../../services/ProjectsExtractor';
 import { GitlabApi } from '../clients/gitlab/Client';
-import { ProjectDTO } from '../../common/DTO/Project';
+import { ProjectTopicsUpdater } from '../../services/ProjectTopicsUpdater';
 
 export const command = 'topics <command> [topics]'
 
@@ -14,7 +14,7 @@ export const builder = (yargs: yargs.Argv) => {
     return QueryOptions(yargs, true)
         .positional('command', {
             type: 'string',
-            choices: ['add', 'remove', 'clear', '+', 'rm', '^'],
+            choices: ['add', 'remove', 'clear'],
             desc: 'Действие над топиками',
             coerce: (argv: string) => {
                 switch (argv) {
@@ -52,44 +52,13 @@ export const builder = (yargs: yargs.Argv) => {
             ['$0 topics remove team:Foo,project:Bar --q topic=team:Foo,project:Bar', 'Удалить топики team:Foo и project:Bar из репозиториев, у которых такие топики уже есть'],
             ['$0 topics clear --q archived=false', 'Очистить топики во всех не заархивированных репозиториях'],
         ])
+        .epilog('Короткие синонимы команд: + = add, rm = remove, ^ = clear')
 }
 
 export const handler = async function (argv: any) {
     const gitlabApi = new GitlabApi(`${argv.host}:${argv.port}`, argv.token);
     const extractor = new ProjectsExtractor(argv.expressions, gitlabApi)
-    extractor.extract()
-        .then(async (result: ProjectDTO[]) => {
-            for (let project of result) {
-                let shouldUpdateTopics = false;
-                switch (argv.command) {
-                    case 'add':
-                        let topics = argv.topics.filter((topic: string) => !project.topics.includes(topic));
-                        if (topics.length) {
-                            project.topics.push(...topics);
-                            shouldUpdateTopics = true;
-                        }
-                        break;
-                    case 'remove':
-                        if (project.topics.length) {
-                            project.topics = project.topics.filter((topic: string) => {
-                                if (argv.topics.includes(topic)) {
-                                    shouldUpdateTopics = true;
-                                    return false;
-                                }
-                                return true
-                            })
-                        }
-                        break;
-                    case 'clear':
-                        if (project.topics.length) {
-                            shouldUpdateTopics = true;
-                            project.topics = [];
-                        }
-                        break;
-                }
-                if (shouldUpdateTopics) {
-                    await gitlabApi.updateProjectData(project.id, {topics: project.topics});
-                }
-            }
-        })
+    const result = await extractor.extract()
+    const updater = new ProjectTopicsUpdater(gitlabApi, argv.onError, argv.retries)
+    await updater.execute(result, argv.command, argv.topics)
 }

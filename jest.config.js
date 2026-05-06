@@ -3,6 +3,9 @@ module.exports = {
   testEnvironment: 'node',
   roots: ['<rootDir>/src'],
   testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
+  moduleNameMapper: {
+    '^ora$': '<rootDir>/src/test/__mocks__/ora.cjs',
+  },
   transform: {
     '^.+\\.ts$': 'ts-jest',
   },
