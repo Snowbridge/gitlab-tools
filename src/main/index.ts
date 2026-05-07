@@ -1,22 +1,25 @@
 #!/usr/bin/env node
 
+import dotenv from 'dotenv'
+import fs from 'fs'
 import yargs from 'yargs/yargs'
-import 'dotenv/config'
 import path from 'path'
+import { profileFilePath, readActiveProfileName } from './services/ConfigProfileService'
+
+loadConfig()
 
 yargs(process.argv.slice(2))
     .options({
         host: {
             type: 'string',
             default: process.env.GITLAB_HOST,
-            demandOption: true,
             desc: 'дефолт берется из переменной окружения GITLAB_HOST',
             hidden: true,
         },
         token: {
             type: 'string',
             default: process.env.GITLAB_TOKEN,
-            defaultDescription: !process.env.GITLAB_TOKEN ? 'undefined' : excapeToken(process.env.GITLAB_TOKEN),
+            defaultDescription: !process.env.GITLAB_TOKEN ? 'undefined' : escapeToken(process.env.GITLAB_TOKEN),
             desc: 'дефолт берется из переменной окружения GITLAB_TOKEN',
             hidden: true,
         },
@@ -63,6 +66,11 @@ yargs(process.argv.slice(2))
     .check((argv) => {
         if (!!argv.debug)
             process.env.DEBUG = 'true'
+        const top = argv._[0]
+        if (top === 'config')
+            return true
+        if (!argv.host || !argv.token)
+            throw new Error('Задайте GITLAB_HOST и GITLAB_TOKEN (или опции --host и --token)')
         return true
     })
     .strict()
@@ -70,7 +78,17 @@ yargs(process.argv.slice(2))
     .parseAsync()
     .then();
 
-function excapeToken(token: string, left = 3, right = 2): string {
+function loadConfig() {
+    const profileName = readActiveProfileName()
+    if (profileName) {
+        const confPath = profileFilePath(profileName)
+        if (fs.existsSync(confPath))
+            dotenv.config({ path: confPath, override: true })
+    }
+    dotenv.config({ override: true })
+}
+
+function escapeToken(token: string, left = 3, right = 2): string {
     if (token.length < left + right)
         return token[0] + new Array(token.length).join('*');
     const regex = new RegExp(`^(.{${left},${left}}).*(.{${right},${right}})$`, 'ig');
