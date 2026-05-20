@@ -1,4 +1,10 @@
 import { Axios, AxiosRequestConfig } from "axios"
+import {
+    formatParseResponseError,
+    logHttpErrorFull,
+    logParseResponseError,
+    toGitlabHttpError,
+} from "../../common/GitlabHttpError"
 
 export class BaseAxiosClient extends Axios {
 
@@ -12,15 +18,23 @@ export class BaseAxiosClient extends Axios {
         })
 
         if (!this.defaults.transformResponse)
-            this.defaults.transformResponse = [this.transformResponse]
+            this.defaults.transformResponse = [this.transformResponse.bind(this)]
 
         if (!this.defaults.transformRequest)
-            this.defaults.transformRequest = [this.transformRequest]
+            this.defaults.transformRequest = [this.transformRequest.bind(this)]
 
         if (!this.defaults.validateStatus)
             this.defaults.validateStatus = (status) => {
                 return status < 400
             }
+
+        this.interceptors.response.use(
+            (response) => response,
+            (error) => {
+                logHttpErrorFull(error)
+                return Promise.reject(toGitlabHttpError(error))
+            },
+        )
     }
 
     private transformResponse(data: any): any {
@@ -28,7 +42,8 @@ export class BaseAxiosClient extends Axios {
             if (data)
                 return JSON.parse(data)
         } catch (e) {
-            console.error({ message: "Unexpected response data format", data: data, error: e })
+            logParseResponseError(data, e)
+            console.error(formatParseResponseError(data))
         }
         return data
     }

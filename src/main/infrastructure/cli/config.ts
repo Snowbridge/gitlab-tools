@@ -21,12 +21,20 @@ export const command = 'config'
 export const describe = 'Управление конфигурацией утилиты в ~/.config/gitlab-tools/'
 
 export const builder = (yargs: yargs.Argv) => {
-    return yargs.commandDir('config')
+    return yargs
+        .option('unmasked', {
+            type: 'boolean',
+            default: false,
+            describe: 'Показать GITLAB_TOKEN без маскировки (по умолчанию токен скрыт)',
+        })
+        .commandDir('config')
 }
 
-export const handler = (argv: yargs.Arguments): void => {
+export const handler = (
+    argv: yargs.ArgumentsCamelCase<{ unmasked?: boolean }>,
+): void => {
     if (argv._.length > 1)
         return
     const service = new GitlabToolsProfileConfigService()
-    emitProfileActionResult(service.showActiveProfileAndConfig())
+    emitProfileActionResult(service.showActiveProfileAndConfig(!!argv.unmasked))
 }

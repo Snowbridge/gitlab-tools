@@ -2,24 +2,28 @@ import * as Path from 'node:path'
 import os from 'node:os'
 import winston from "winston"
 
-export default (parent: Function) => {
+function logFilePath(): string {
+    return Path.join(
+        Path.resolve(os.tmpdir()),
+        `${process.env.LOG_FILENAME || (Math.random() * 100).toString(36).replace('.', '')}.json`,
+    )
+}
+
+export function createLogger(loggerName: string): winston.Logger {
     const logger = winston.createLogger({
         format: winston.format.simple(),
         defaultMeta: {
-            logger: parent.name
+            logger: loggerName,
         },
         transports: [
             new winston.transports.File({
                 format: winston.format.combine(
                     winston.format.json(),
-                    winston.format.timestamp()
+                    winston.format.timestamp(),
                 ),
-                filename: Path.join(
-                    Path.resolve(os.tmpdir()),
-                    `${process.env.LOG_FILENAME || (Math.random() * 100).toString(36).replace('.', '')}.json`
-                )
+                filename: logFilePath(),
             }),
-        ]
+        ],
     })
 
     if (!!process.env.DEBUG)
@@ -29,3 +33,7 @@ export default (parent: Function) => {
 
     return logger
 }
+
+export const httpClientLogger = createLogger('GitlabHttp')
+
+export default (parent: Function) => createLogger(parent.name)

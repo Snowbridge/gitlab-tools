@@ -1,7 +1,9 @@
 import { spawnSync } from 'child_process'
+import dotenv from 'dotenv'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
+import { GitlabApi } from '../infrastructure/clients/gitlab/Client'
 
 export const configDir = path.join(os.homedir(), '.config', 'gitlab-tools')
 
@@ -62,7 +64,7 @@ export type ProfileActionResult =
 
 export class GitlabToolsProfileConfigService {
     /** Имя активного профиля и содержимое файла конфигурации (*.conf). */
-    showActiveProfileAndConfig(): ProfileActionResult {
+    showActiveProfileAndConfig(unmasked = false): ProfileActionResult {
         const name = readActiveProfileName()
         const stdout: string[] = []
         if (!name) {
@@ -76,7 +78,7 @@ export class GitlabToolsProfileConfigService {
             return { ok: true, stdout }
         }
         const body = fs.readFileSync(filePath, 'utf8')
-        stdout.push(body.trimEnd())
+        stdout.push(formatConfigBodyForDisplay(body, unmasked))
         return { ok: true, stdout }
     }
 
@@ -160,6 +162,44 @@ export class GitlabToolsProfileConfigService {
         return { ok: true }
     }
 
+    async testConnection(profileName?: string): Promise<ProfileActionResult> {
+        let profileLabel = 'текущий'
+
+        if (profileName !== undefined) {
+            if (!isSafeProfileName(profileName))
+                return { ok: false, exitCode: 1, stderr: 'Недопустимое имя профиля.' }
+            const filePath = profileFilePath(profileName)
+            if (!fs.existsSync(filePath))
+                return { ok: false, exitCode: 1, stderr: `Профиль не найден: ${filePath}` }
+            dotenv.config({ path: filePath, override: true })
+            profileLabel = profileName
+        }
+
+        const host = process.env.GITLAB_HOST
+        const token = process.env.GITLAB_TOKEN
+        if (!host || !token)
+            return {
+                ok: false,
+                exitCode: 1,
+                stderr: 'Не заданы GITLAB_HOST и/или GITLAB_TOKEN.',
+            }
+
+        try {
+            const api = new GitlabApi(`${host}:443`, token)
+            const pages = await api.testConnection()
+            return {
+                ok: true,
+                stdout: [
+                    `Конфигурация корректна, GitLab доступен (профиль: ${profileLabel}).`,
+                    `Страниц в выборке /projects: ${pages}.`,
+                ],
+            }
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : String(error)
+            return { ok: false, exitCode: 1, stderr: message }
+        }
+    }
+
     removeProfile(name: string): ProfileActionResult {
         if (!isSafeProfileName(name))
             return { ok: false, exitCode: 1, stderr: 'Недопустимое имя профиля.' }
@@ -181,4 +221,23 @@ function isSafeProfileName(name: string): boolean {
     if (name.length === 0 || name === '.' || name === '..')
         return false
     return !/[\\/]/.test(name)
+}
+
+function maskTokenForDisplay(token: string): string {
+    return `${token.slice(0, 4)}********`
+}
+
+function formatConfigBodyForDisplay(body: string, unmasked: boolean): string {
+    if (unmasked)
+        return body.trimEnd()
+    return body
+        .split('\n')
+        .map((line) => {
+            if (!line.startsWith('GITLAB_TOKEN='))
+                return line
+            const value = line.slice('GITLAB_TOKEN='.length)
+            return `GITLAB_TOKEN=${maskTokenForDisplay(value)}`
+        })
+        .join('\n')
+        .trimEnd()
 }
