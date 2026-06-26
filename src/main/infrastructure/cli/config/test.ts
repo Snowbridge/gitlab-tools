@@ -4,13 +4,20 @@ import { GitlabToolsProfileConfigService } from '../../../services/ConfigProfile
 
 export const command = 'test [name]'
 
-export const describe = 'Проверить конфигурацию и доступность GitLab'
+export const describe = 'Проверить подключение'
+
+const DETAILED_DESCRIPTION = [
+    'Прочитать профиль и проверить доступность GitLab API.',
+    'Без аргумента — проверить активный профиль или переменные окружения.',
+].join('\n')
 
 export const builder = (y: yargs.Argv) =>
-    y.positional('name', {
-        describe: 'Имя профиля (*.conf); без аргумента — активный профиль / окружение',
-        type: 'string',
-    })
+    y
+        .usage(`$0 config test [name]\n\n${DETAILED_DESCRIPTION}`)
+        .positional('name', {
+            describe: 'Имя профиля (*.conf); без аргумента — активный профиль / окружение',
+            type: 'string',
+        })
 
 export const handler = async (
     argv: yargs.ArgumentsCamelCase<{ name?: string }>,

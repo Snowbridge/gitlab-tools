@@ -1,5 +1,6 @@
 import yargs from 'yargs'
 import QueryOptions from './common/QueryOptions';
+import { QUERY_SELECTION_DESCRIPTION } from './common/helpTexts';
 import { ProjectsExtractor } from '../../services/ProjectsExtractor';
 import { GitlabApi } from '../clients/gitlab/Client';
 import { Reporter } from '../../services/Reporter';
@@ -7,12 +8,18 @@ import { ProjectDTO } from '../../common/DTO/Project';
 
 export const command = 'report'
 
-export const describe = 'Отчет по репозиториям'
+export const describe = 'Отчёт по репозиториям GitLab'
+
+const DETAILED_DESCRIPTION = [
+    'Вывести список репозиториев GitLab, подходящих под заданные отборы.',
+    QUERY_SELECTION_DESCRIPTION,
+    'Способ вывода задаётся --output: console — таблица в консоль; json — файл в текущем каталоге (пригоден как вход для --qn в других командах).',
+].join('\n')
 
 export const aliases = ['rep', 'r'];
 
 export const builder = (yargs: yargs.Argv) => {
-    return QueryOptions(yargs, false)
+    return QueryOptions(yargs.usage(`$0 report\n\n${DETAILED_DESCRIPTION}`), false)
         .options({
             output: {
                 desc: 'Способ вывода отобранных проектов - на консоль или json-файл в текущий каталог',

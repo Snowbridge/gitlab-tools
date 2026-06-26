@@ -4,10 +4,16 @@ import { GitlabToolsProfileConfigService } from '../../../services/ConfigProfile
 
 export const command = 'create <name>'
 
-export const describe = 'Создать профиль из текущих GITLAB_HOST и GITLAB_TOKEN'
+export const describe = 'Создать профиль'
+
+const DETAILED_DESCRIPTION = [
+    'Записать GITLAB_HOST и GITLAB_TOKEN из текущего окружения в файл <name>.conf.',
+    'Опция --force перезаписывает существующий профиль.',
+].join('\n')
 
 export const builder = (y: yargs.Argv) =>
     y
+        .usage(`$0 config create <name>\n\n${DETAILED_DESCRIPTION}`)
         .positional('name', {
             describe: 'Имя нового профиля',
             type: 'string',

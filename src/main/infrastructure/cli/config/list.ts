@@ -4,9 +4,12 @@ import { GitlabToolsProfileConfigService } from '../../../services/ConfigProfile
 
 export const command = 'list'
 
-export const describe = 'Показать все профили (файлы *.conf)'
+export const describe = 'Список профилей'
 
-export const builder = (y: yargs.Argv) => y
+const DETAILED_DESCRIPTION = 'Показать имена всех профилей (файлы *.conf) в каталоге ~/.config/gitlab-tools/.'
+
+export const builder = (y: yargs.Argv) =>
+    y.usage(`$0 config list\n\n${DETAILED_DESCRIPTION}`)
 
 export const handler = (): void => {
     const service = new GitlabToolsProfileConfigService()

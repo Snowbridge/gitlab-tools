@@ -1,17 +1,25 @@
 import yargs from 'yargs'
 import QueryOptions from './common/QueryOptions';
+import { QUERY_SELECTION_DESCRIPTION } from './common/helpTexts';
 import { ProjectsExtractor } from '../../services/ProjectsExtractor';
 import { GitlabApi } from '../clients/gitlab/Client';
 import { ProjectTopicsUpdater } from '../../services/ProjectTopicsUpdater';
 
 export const command = 'topics <command> [topics]'
 
-export const describe = 'Изменение топиков репозиториев (опции отбора репозиториев скрыты, просмотреть можно с --show-hidden)'
+export const describe = 'Изменение топиков репозиториев'
+
+const DETAILED_DESCRIPTION = [
+    'Добавить, удалить или очистить топики у отобранных репозиториев GitLab.',
+    QUERY_SELECTION_DESCRIPTION,
+    'Подкоманды: add — добавить топики; remove — удалить; clear — очистить все топики (без списка топиков).',
+    'Короткие синонимы: + = add, rm = remove, ^ = clear.',
+].join('\n')
 
 export const aliases = ['top', 't'];
 
 export const builder = (yargs: yargs.Argv) => {
-    return QueryOptions(yargs, true)
+    return QueryOptions(yargs.usage(`$0 topics <command> [topics]\n\n${DETAILED_DESCRIPTION}`), true)
         .positional('command', {
             type: 'string',
             choices: ['add', 'remove', 'clear'],

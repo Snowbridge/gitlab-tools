@@ -18,10 +18,17 @@ export function emitProfileActionResult(r: ProfileActionResult): void {
 
 export const command = 'config'
 
-export const describe = 'Управление конфигурацией утилиты в ~/.config/gitlab-tools/'
+export const describe = 'Управление профилями конфигурации'
+
+const DETAILED_DESCRIPTION = [
+    'Профили хранятся в ~/.config/gitlab-tools/ как файлы <name>.conf с GITLAB_HOST и GITLAB_TOKEN.',
+    'Активный профиль указывается в файле profile; при старте утилиты dotenv подхватывает соответствующий .conf.',
+    'Без подкоманды — показать активный профиль и его содержимое. Опция --unmasked выводит токен без маскировки.',
+].join('\n')
 
 export const builder = (yargs: yargs.Argv) => {
     return yargs
+        .epilog(DETAILED_DESCRIPTION)
         .option('unmasked', {
             type: 'boolean',
             default: false,

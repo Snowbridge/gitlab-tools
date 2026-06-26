@@ -7,18 +7,20 @@ import { ProcessGitRemoteExecutor } from '../../services/ProcessGitRemoteExecuto
 
 export const command = 'publish <dir>'
 
-export const describe = [
-    'Опубликовать репы в GitLab',
+export const describe = 'Опубликовать репы в GitLab'
+
+const DETAILED_DESCRIPTION = [
     'Для публикации репы в GitLab нужно указать каталог с рабочей копией репы или общий корень нескольких рабочих копий.',
     'Если <dir> - это рабочая копия репы, то команда создаст новый репозиторий с именем текущего каталога в личных проектах пользователя (без --root-group) или в группе --root-group',
     'Если <dir> - это общий корень нескольких рабочих копий, то команда создаст новые репозитории с именами каталогов и воссозданием структуры групп в --root-group (обязательна)',
     'Команда всегда пушит все ветки и теги. Опция --existing применяется, если remote с --remote-name уже существует: skip — пропустить рабочую копию; rename/replace — только если remote указывает на другой хост.',
-].join('\n\t')
+].join('\n')
 
 export const aliases = ['pub']
 
 export const builder = (yargs: yargs.Argv) => {
     return yargs
+        .usage(`$0 publish <dir>\n\n${DETAILED_DESCRIPTION}`)
         .positional('dir', {
             type: 'string',
             desc: 'Каталог с рабочей копией репы или общий корень нескольких рабочих копий (по дефолту просто корень)',

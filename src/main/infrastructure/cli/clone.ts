@@ -1,5 +1,6 @@
 import yargs from 'yargs'
 import QueryOptions from './common/QueryOptions';
+import { QUERY_SELECTION_DESCRIPTION } from './common/helpTexts';
 import { ProjectsExtractor } from '../../services/ProjectsExtractor';
 import { GitlabApi } from '../clients/gitlab/Client';
 import { ProjectDTO } from '../../common/DTO/Project';
@@ -7,12 +8,20 @@ import { GitCloner } from '../../services/Cloner';
 
 export const command = 'clone'
 
-export const describe = 'Склонировать репы, подходящие под заданные отборы. Отборы задаются точно так же, как для команды report'
+export const describe = 'Склонировать репозитории по отборам'
+
+const DETAILED_DESCRIPTION = [
+    'Склонировать репозитории, подходящие под заданные отборы. Отборы задаются так же, как для команды report.',
+    QUERY_SELECTION_DESCRIPTION,
+    'Целевой каталог задаётся опцией --dir (по умолчанию текущий).',
+    'Если репозиторий уже склонирован, поведение задаётся --existing: skip — пропустить; drop — удалить и клонировать заново; fetch — git fetch; pull — git pull.',
+    'Опции --ltrim-path и --resume-from управляют локальной структурой каталогов и порядком обработки.',
+].join('\n')
 
 export const aliases = [];
 
 export const builder = (yargs: yargs.Argv) => {
-    return QueryOptions(yargs, true)
+    return QueryOptions(yargs.usage(`$0 clone\n\n${DETAILED_DESCRIPTION}`), true)
         .options({
             directory: {
                 desc: 'Каталог в файловой системе, куда склонировать все отобранные репы',

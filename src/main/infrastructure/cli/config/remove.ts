@@ -4,14 +4,21 @@ import { GitlabToolsProfileConfigService } from '../../../services/ConfigProfile
 
 export const command = 'remove <name>'
 
-export const describe = 'Удалить файл профиля'
+export const describe = 'Удалить профиль'
+
+const DETAILED_DESCRIPTION = [
+    'Удалить файл <name>.conf из каталога конфигурации.',
+    'Указатель profile (активный профиль) не изменяется.',
+].join('\n')
 
 export const builder = (y: yargs.Argv) =>
-    y.positional('name', {
-        describe: 'Имя профиля',
-        type: 'string',
-        demandOption: true,
-    })
+    y
+        .usage(`$0 config remove <name>\n\n${DETAILED_DESCRIPTION}`)
+        .positional('name', {
+            describe: 'Имя профиля',
+            type: 'string',
+            demandOption: true,
+        })
 
 export const handler = (argv: yargs.ArgumentsCamelCase<{ name: string }>): void => {
     const service = new GitlabToolsProfileConfigService()
