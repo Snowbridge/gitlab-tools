@@ -13,6 +13,7 @@ import {
     GitPublisher,
     GitRemoteExecutor,
     planNestedGroupPaths,
+    publishSuccessTextPrefix,
     remoteHostMatchesConfig,
 } from '../main/services/Publisher'
 import { AddRemoteStrategy } from '../main/services/RemoteSetupStrategies/AddRemoteStrategy'
@@ -477,5 +478,20 @@ describe('GitPublisher', () => {
 
         expect(client.createProject).toHaveBeenCalled()
         expect(git.pushAll).toHaveBeenCalled()
+    })
+})
+
+describe('publishSuccessTextPrefix', () => {
+    it('returns 🆕 when project was created', () => {
+        expect(publishSuccessTextPrefix({ projectCreated: true, pushed: false })).toBe('🆕 ')
+        expect(publishSuccessTextPrefix({ projectCreated: true, pushed: true })).toBe('🆕 ')
+    })
+
+    it('returns 📈 when project existed and push transferred data', () => {
+        expect(publishSuccessTextPrefix({ projectCreated: false, pushed: true })).toBe('📈 ')
+    })
+
+    it('returns undefined when project existed and push was up to date', () => {
+        expect(publishSuccessTextPrefix({ projectCreated: false, pushed: false })).toBeUndefined()
     })
 })

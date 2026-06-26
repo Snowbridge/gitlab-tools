@@ -199,7 +199,7 @@ async function getOrCreateProject(
     client: GitlabPublishClient,
     target: PublishTarget,
     namespaceId?: number
-): Promise<GitlabProjectDTO> {
+): Promise<{ project: GitlabProjectDTO; created: boolean }> {
     let project = await client.getProjectByPath(target.pathWithNamespace)
     if (!project) {
         try {
@@ -211,6 +211,7 @@ async function getOrCreateProject(
                     namespace_id: namespaceId!,
                 }
             project = await client.createProject(createParams)
+            return { project, created: true }
         } catch (error) {
             if (error instanceof GitlabHttpError && (error.status === 400 || error.status === 409)) {
                 project = await client.getProjectByPath(target.pathWithNamespace)
@@ -221,7 +222,20 @@ async function getOrCreateProject(
             }
         }
     }
-    return project
+    return { project, created: false }
+}
+
+export type PublishOutcome = {
+    projectCreated: boolean
+    pushed: boolean
+}
+
+export function publishSuccessTextPrefix(outcome: PublishOutcome): string | undefined {
+    if (outcome.projectCreated)
+        return '🆕 '
+    if (outcome.pushed)
+        return '📈 '
+    return undefined
 }
 
 export class GitPublisher {
@@ -274,13 +288,14 @@ export class GitPublisher {
         )
 
         await queue.executeProcessing(async (target) => {
-            const pushed = await this.publishTarget(target)
-            if (pushed)
-                return { successTextPrefix: '📈 ' }
+            const outcome = await this.publishTarget(target)
+            const successTextPrefix = publishSuccessTextPrefix(outcome)
+            if (successTextPrefix)
+                return { successTextPrefix }
         })
     }
 
-    private async publishTarget(target: PublishTarget): Promise<boolean> {
+    private async publishTarget(target: PublishTarget): Promise<PublishOutcome> {
         if (this.existing === 'skip' && await this.git.remoteExists(target.localPath, this.remoteName)) {
             throw new ProcessingSkippedError(
                 ` 〰️ ${target.pathWithNamespace}: remote «${this.remoteName}» уже существует, пропущено`
@@ -297,7 +312,9 @@ export class GitPublisher {
             namespaceId = await this.ensureNamespaceId(target)
         }
 
-        await getOrCreateProject(this.client, { ...target, pathWithNamespace }, namespaceId)
+        const { created: projectCreated } = await getOrCreateProject(
+            this.client, { ...target, pathWithNamespace }, namespaceId
+        )
 
         const remoteUrl = buildSshRemoteUrl(this.configHost, this.sshPort, pathWithNamespace)
         const remoteExists = await this.git.remoteExists(target.localPath, this.remoteName)
@@ -315,7 +332,8 @@ export class GitPublisher {
             replaceSuffix: this.replaceSuffix,
         })
 
-        return await this.git.pushAll(target.localPath, this.remoteName)
+        const pushed = await this.git.pushAll(target.localPath, this.remoteName)
+        return { projectCreated, pushed }
     }
 
     private async ensureNamespaceId(target: PublishTarget): Promise<number> {
