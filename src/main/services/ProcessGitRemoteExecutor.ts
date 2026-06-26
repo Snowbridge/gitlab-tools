@@ -44,7 +44,7 @@ export class ProcessGitRemoteExecutor implements GitRemoteExecutor {
         await new GitRemoteAddCliHandler(localPath, name, url).execute()
     }
 
-    async pushAll(localPath: string, remoteName: string): Promise<void> {
-        await new GitPushAllCliHandler(localPath, remoteName).execute()
+    async pushAll(localPath: string, remoteName: string): Promise<boolean> {
+        return new GitPushAllCliHandler(localPath, remoteName).execute()
     }
 }

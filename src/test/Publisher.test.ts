@@ -251,7 +251,7 @@ describe('GitPublisher', () => {
         client.createProject.mockResolvedValue(project('org/myrepo', 100))
         git.remoteExists.mockResolvedValue(false)
         git.getRemoteUrl.mockResolvedValue(null)
-        git.pushAll.mockResolvedValue(undefined)
+        git.pushAll.mockResolvedValue(false)
 
         const publisher = new GitPublisher(
             client, git, 'gitlab.com', 22, 'org', 'origin', 'replace', '_old', 'skip', 0
@@ -284,7 +284,7 @@ describe('GitPublisher', () => {
         client.getProjectByPath.mockResolvedValue(project('org/myrepo'))
         git.remoteExists.mockResolvedValue(true)
         git.getRemoteUrl.mockResolvedValue('git@gitlab.com:org/myrepo.git')
-        git.pushAll.mockResolvedValue(undefined)
+        git.pushAll.mockResolvedValue(false)
 
         const publisher = new GitPublisher(
             client, git, 'gitlab.com', 22, 'org', 'origin', 'replace', '_old', 'skip', 0
@@ -309,7 +309,7 @@ describe('GitPublisher', () => {
         client.getProjectByPath.mockResolvedValue(project('org/myrepo'))
         git.remoteExists.mockResolvedValue(true)
         git.getRemoteUrl.mockResolvedValue('git@github.com:org/myrepo.git')
-        git.pushAll.mockResolvedValue(undefined)
+        git.pushAll.mockResolvedValue(false)
 
         const publisher = new GitPublisher(
             client, git, 'gitlab.com', 22, 'org', 'origin', 'replace', '_old', 'skip', 0
@@ -338,7 +338,7 @@ describe('GitPublisher', () => {
         client.getProjectByPath.mockResolvedValue(project('org/myrepo'))
         git.remoteExists.mockResolvedValue(true)
         git.getRemoteUrl.mockResolvedValue('git@github.com:org/myrepo.git')
-        git.pushAll.mockResolvedValue(undefined)
+        git.pushAll.mockResolvedValue(false)
 
         const publisher = new GitPublisher(
             client, git, 'gitlab.com', 22, 'org', 'origin', 'rename', '_old', 'skip', 0
@@ -370,7 +370,7 @@ describe('GitPublisher', () => {
         client.getProjectByPath.mockResolvedValue(null)
         client.createProject.mockResolvedValue(project('org/frontend/app', 100))
         git.remoteExists.mockResolvedValue(false)
-        git.pushAll.mockResolvedValue(undefined)
+        git.pushAll.mockResolvedValue(false)
 
         const publisher = new GitPublisher(
             client, git, 'gitlab.com', 22, 'org', 'origin', 'replace', '_old', 'skip', 0
@@ -398,7 +398,7 @@ describe('GitPublisher', () => {
         client.getProjectByPath.mockResolvedValue(null)
         client.createProject.mockResolvedValue(project('alice/myrepo', 100))
         git.remoteExists.mockResolvedValue(false)
-        git.pushAll.mockResolvedValue(undefined)
+        git.pushAll.mockResolvedValue(false)
 
         const publisher = new GitPublisher(
             client, git, 'gitlab.com', 22, null, 'origin', 'replace', '_old', 'skip', 0
@@ -462,7 +462,7 @@ describe('GitPublisher', () => {
         client.getProjectByPath.mockResolvedValue(null)
         client.createProject.mockResolvedValue(project('org/myrepo', 100))
         git.remoteExists.mockResolvedValue(false)
-        git.pushAll.mockResolvedValue(undefined)
+        git.pushAll.mockResolvedValue(false)
 
         const publisher = new GitPublisher(
             client, git, 'gitlab.com', 22, 'org', 'origin', 'skip', '_old', 'skip', 0

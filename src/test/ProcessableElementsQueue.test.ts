@@ -113,6 +113,26 @@ describe('ProcessableElementsQueue', () => {
                 expect(element.attempt).toBe(1) // Should process successfully and exactly once
             })
 
+            it('should pass successTextPrefix to spinner.succeed', async () => {
+                const ora = require('ora')
+                const succeed = jest.fn()
+                ora.mockReturnValue({
+                    start: jest.fn().mockReturnThis(),
+                    succeed,
+                    fail: jest.fn(),
+                    stop: jest.fn(),
+                })
+
+                const values = ['item1']
+                const queue = new ProcessableElementsQueue(values, 'skip', 3, (value) => String(value))
+                const element = queue.next()
+                const callback = jest.fn().mockResolvedValue({ successTextPrefix: '📈 ' })
+
+                await queue.processElement(element, callback)
+
+                expect(succeed).toHaveBeenCalledWith('📈 item1')
+            })
+
             it('should stop spinner and log message on ProcessingSkippedError', async () => {
                 const values = ['item1']
                 const queue = new ProcessableElementsQueue(values, 'skip', 3)

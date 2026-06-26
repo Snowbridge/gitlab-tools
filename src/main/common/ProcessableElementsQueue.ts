@@ -8,7 +8,11 @@ type QueueElement<T = any> = {
     name: string // human-readable value name to refer to in log messages
 }
 
-type ProcessorCallback<T = any> = (value: T) => Promise<void>
+export type ProcessingSuccessHint = {
+    successTextPrefix?: string
+}
+
+type ProcessorCallback<T = any> = (value: T) => Promise<void | ProcessingSuccessHint>
 
 export class ProcessableElementsQueue<T = any> {
     private processableElements: QueueElement<T>[]
@@ -56,9 +60,12 @@ export class ProcessableElementsQueue<T = any> {
 
         const spinner = ora(`${element.name}`).start()
         try {
-            await callback(element.value)
+            const hint = await callback(element.value)
             this.logger.info(`Attempt # ${element.attempt} on ${element.name} successful`)
-            spinner.succeed()
+            if (hint?.successTextPrefix)
+                spinner.succeed(`${hint.successTextPrefix}${element.name}`)
+            else
+                spinner.succeed()
         } catch (error: any) {
             if (error instanceof ProcessingSkippedError) {
                 spinner.stop()

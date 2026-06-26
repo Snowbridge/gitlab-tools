@@ -32,7 +32,7 @@ export type GitRemoteExecutor = {
     renameRemote(localPath: string, from: string, to: string): Promise<void>
     removeRemote(localPath: string, name: string): Promise<void>
     addRemote(localPath: string, name: string, url: string): Promise<void>
-    pushAll(localPath: string, remoteName: string): Promise<void>
+    pushAll(localPath: string, remoteName: string): Promise<boolean>
 }
 
 export function isWorkingCopyRoot(dir: string): boolean {
@@ -274,11 +274,13 @@ export class GitPublisher {
         )
 
         await queue.executeProcessing(async (target) => {
-            await this.publishTarget(target)
+            const pushed = await this.publishTarget(target)
+            if (pushed)
+                return { successTextPrefix: '📈 ' }
         })
     }
 
-    private async publishTarget(target: PublishTarget): Promise<void> {
+    private async publishTarget(target: PublishTarget): Promise<boolean> {
         if (this.existing === 'skip' && await this.git.remoteExists(target.localPath, this.remoteName)) {
             throw new ProcessingSkippedError(
                 ` 〰️ ${target.pathWithNamespace}: remote «${this.remoteName}» уже существует, пропущено`
@@ -313,7 +315,7 @@ export class GitPublisher {
             replaceSuffix: this.replaceSuffix,
         })
 
-        await this.git.pushAll(target.localPath, this.remoteName)
+        return await this.git.pushAll(target.localPath, this.remoteName)
     }
 
     private async ensureNamespaceId(target: PublishTarget): Promise<number> {

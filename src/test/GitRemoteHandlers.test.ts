@@ -55,6 +55,22 @@ describe('GitPushAllCliHandler', () => {
             'git push --all origin && git push --tags origin'
         )
     })
+
+    it('returns false when git push output is up to date', async () => {
+        execMock.mockImplementation((_cmd, _opts, callback) => {
+            callback(null, '', 'To ssh://git@host/repo.git\nEverything up-to-date\n')
+        })
+
+        await expect(new GitPushAllCliHandler('/repo', 'origin').execute()).resolves.toBe(false)
+    })
+
+    it('returns true when git push output indicates transfer', async () => {
+        execMock.mockImplementation((_cmd, _opts, callback) => {
+            callback(null, '', 'To ssh://git@host/repo.git\n   abc..def  main -> main\n')
+        })
+
+        await expect(new GitPushAllCliHandler('/repo', 'origin').execute()).resolves.toBe(true)
+    })
 })
 
 describe('ProcessGitRemoteExecutor', () => {
