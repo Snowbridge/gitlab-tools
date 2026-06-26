@@ -1,5 +1,8 @@
 import { AxiosRequestConfig } from "axios";
+import { GitlabGroupDTO } from "../../../common/DTO/Gitlab/GroupDTO";
 import { GitlabProjectDTO } from "../../../common/DTO/Gitlab/ProjectDTO";
+import { GitlabUserDTO } from "../../../common/DTO/Gitlab/UserDTO";
+import { GitlabHttpError } from "../../../common/GitlabHttpError";
 import { BaseAxiosClient } from "../BaseClient";
 import { ParameterExpression } from "../../../common/ParameterExpression";
 
@@ -45,6 +48,43 @@ export class GitlabApi extends BaseAxiosClient {
 
     async testConnection(): Promise<number> {
         return this.getTotalPages('/projects?per_page=1')
+    }
+
+    async getGroup(fullPath: string): Promise<GitlabGroupDTO | null> {
+        try {
+            const { data } = await this.get<GitlabGroupDTO>(`/groups/${encodeURIComponent(fullPath)}`)
+            return data
+        } catch (error) {
+            if (error instanceof GitlabHttpError && error.status === 404)
+                return null
+            throw error
+        }
+    }
+
+    async createGroup(params: { name: string; path: string; parent_id?: number }): Promise<GitlabGroupDTO> {
+        const { data } = await this.post<GitlabGroupDTO>('/groups', params)
+        return data
+    }
+
+    async getProjectByPath(pathWithNamespace: string): Promise<GitlabProjectDTO | null> {
+        try {
+            const { data } = await this.get<GitlabProjectDTO>(`/projects/${encodeURIComponent(pathWithNamespace)}`)
+            return data
+        } catch (error) {
+            if (error instanceof GitlabHttpError && error.status === 404)
+                return null
+            throw error
+        }
+    }
+
+    async createProject(params: { name: string; path?: string; namespace_id?: number }): Promise<GitlabProjectDTO> {
+        const { data } = await this.post<GitlabProjectDTO>('/projects', params)
+        return data
+    }
+
+    async getCurrentUser(): Promise<GitlabUserDTO> {
+        const { data } = await this.get<GitlabUserDTO>('/user')
+        return data
     }
 
     private async getTotalPages(url: string, config?: AxiosRequestConfig): Promise<number> {

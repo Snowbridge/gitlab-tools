@@ -1,5 +1,6 @@
 import ora from 'ora'
 import Logger from './Logger'
+import { ProcessingSkippedError } from './ProcessingSkippedError'
 
 type QueueElement<T = any> = {
     value: T
@@ -59,6 +60,13 @@ export class ProcessableElementsQueue<T = any> {
             this.logger.info(`Attempt # ${element.attempt} on ${element.name} successful`)
             spinner.succeed()
         } catch (error: any) {
+            if (error instanceof ProcessingSkippedError) {
+                spinner.stop()
+                console.log(error.message)
+                this.logger.info(error.message)
+                return
+            }
+
             const errMsg = error?.error?.message ?? error?.message ?? String(error)
             this.logger.info(errMsg)
             if (this.onError == 'retry')

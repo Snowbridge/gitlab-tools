@@ -5,6 +5,7 @@ function createSpinner() {
         },
         succeed: function succeed() {},
         fail: function fail() {},
+        stop: function stop() {},
     }
 }
 

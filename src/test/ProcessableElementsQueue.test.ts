@@ -1,4 +1,5 @@
 import { ProcessableElementsQueue } from '../main/common/ProcessableElementsQueue'
+import { ProcessingSkippedError } from '../main/common/ProcessingSkippedError'
 
 describe('ProcessableElementsQueue', () => {
     describe('constructor', () => {
@@ -110,6 +111,21 @@ describe('ProcessableElementsQueue', () => {
                 
                 expect(callback).toHaveBeenCalledWith('item1')
                 expect(element.attempt).toBe(1) // Should process successfully and exactly once
+            })
+
+            it('should stop spinner and log message on ProcessingSkippedError', async () => {
+                const values = ['item1']
+                const queue = new ProcessableElementsQueue(values, 'skip', 3)
+                const element = queue.next()
+                const logSpy = jest.spyOn(console, 'log').mockImplementation()
+                const callback = jest.fn().mockRejectedValue(
+                    new ProcessingSkippedError(' 〰️ item1: пропущено')
+                )
+
+                await queue.processElement(element, callback)
+
+                expect(logSpy).toHaveBeenCalledWith(' 〰️ item1: пропущено')
+                logSpy.mockRestore()
             })
         })
 
