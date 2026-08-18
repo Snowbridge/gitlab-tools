@@ -1,3 +1,7 @@
+## 2.9.0
+
+1. **`log`** — чтение JSON-логов из `%TEMP%`; опции `--lines` / `-n` (по умолчанию 20), `--all`, `--list`, `--source`. Не требует `GITLAB_HOST` и `GITLAB_TOKEN`.
+
 ## 2.7.0
 
 1. **`config test [name]`** — проверка профиля и доступности GitLab (HEAD `/projects`, `getTotalPages`); опционально указать профиль без переключения активного.

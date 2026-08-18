@@ -67,7 +67,7 @@ yargs(process.argv.slice(2))
         if (!!argv.debug)
             process.env.DEBUG = 'true'
         const top = argv._[0]
-        if (top === 'config')
+        if (top === 'config' || top === 'log')
             return true
         if (!argv.host || !argv.token)
             throw new Error('Задайте GITLAB_HOST и GITLAB_TOKEN (или опции --host и --token)')

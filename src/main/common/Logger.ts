@@ -1,11 +1,9 @@
-import * as Path from 'node:path'
-import os from 'node:os'
-import winston from "winston"
+import winston from 'winston'
+import { buildLogFilePath } from './LogFiles'
 
 function logFilePath(): string {
-    return Path.join(
-        Path.resolve(os.tmpdir()),
-        `${process.env.LOG_FILENAME || (Math.random() * 100).toString(36).replace('.', '')}.json`,
+    return buildLogFilePath(
+        process.env.LOG_FILENAME || (Math.random() * 100).toString(36).replace('.', ''),
     )
 }
 
