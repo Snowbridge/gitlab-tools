@@ -14,7 +14,7 @@ const DETAILED_DESCRIPTION = [
     'Склонировать репозитории, подходящие под заданные отборы. Отборы задаются так же, как для команды report.',
     QUERY_SELECTION_DESCRIPTION,
     'Целевой каталог задаётся опцией --dir (по умолчанию текущий).',
-    'Если репозиторий уже склонирован, поведение задаётся --existing: skip — пропустить; drop — удалить и клонировать заново; fetch — git fetch; pull — git pull.',
+    'Если репозиторий уже склонирован, поведение задаётся --existing: skip — пропустить; drop — удалить и клонировать заново.',
     'Опции --ltrim-path и --resume-from управляют локальной структурой каталогов и порядком обработки.',
 ].join('\n')
 
@@ -34,12 +34,10 @@ export const builder = (yargs: yargs.Argv) => {
                 desc: [
                     'Что делать, если репа уже склонирована',
                     'skip - пропустить репу',
-                    'drop - удалить клон и склонировать заново',
-                    'fetch - выполнить `git fetch --all --prune --force`',
-                    'pull - выполнить `pull --progress -v --no-rebase \"origin\"`'
+                    'drop - удалить клон и склонировать заново'
                 ].join('\n\t'),
                 choices: [
-                    'skip', 'drop', 'fetch', 'pull'
+                    'skip', 'drop'
                 ],
                 default: 'skip',
                 group: 'Clone'
@@ -50,22 +48,6 @@ export const builder = (yargs: yargs.Argv) => {
                     `Значение параметра передается так: --clone-flags="--one val123 -t -w -o --three"`
                 ].join('\n\t'),
                 type: 'string'
-            },
-            'fetch-flags': {
-                desc: [
-                    `Сюда можно передать флаги, которые будут переданы в 'git fetch'`,
-                    `Значение параметра передается так: --fetch-flags="--one val123 -t -w -o --three"`
-                ].join('\n\t'),
-                type: 'string',
-                default: '--all --prune --force'
-            },
-            'pull-flags': {
-                desc: [
-                    `Сюда можно передать флаги, которые будут переданы в 'git pull'`,
-                    `Значение параметра передается так: --pull-flags="--one val123 -t -w -o --three"`
-                ].join('\n\t'),
-                type: 'string',
-                default: '--progress -v --no-rebase'
             },
             'ltrim-path': {
                 type: 'number',
@@ -110,9 +92,7 @@ export const handler = async function (argv: any) {
                 argv.existing,
                 argv.onError,
                 argv.retries,
-                argv.cloneFlags,
-                argv.fetchFlags,
-                argv.pullFlags
+                argv.cloneFlags
             )
 
             cloner.execute()

@@ -69,6 +69,12 @@ yargs(process.argv.slice(2))
         const top = argv._[0]
         if (top === 'config' || top === 'log')
             return true
+        if (top === 'workspace') {
+            const sub = argv._[1] as string | undefined
+            if (!sub) return true
+            if (sub === 'status' || sub === 'switch') return true
+            // publish и будущие remote-команды требуют токен — проваливаемся к проверке ниже
+        }
         if (!argv.host || !argv.token)
             throw new Error('Задайте GITLAB_HOST и GITLAB_TOKEN (или опции --host и --token)')
         return true

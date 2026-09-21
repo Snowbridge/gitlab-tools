@@ -3,21 +3,17 @@ import ora, { Ora } from 'ora'
 import * as fs from 'fs'
 import { ProjectDTO } from '../common/DTO/Project'
 import * as Path from 'node:path'
-import { GitFetchCliHandler } from './GitCliHandlers/GitFetchCliHandler'
 import { AbstractGitCliHandler } from './GitCliHandlers/AbstractGitCliHandler'
-import { GitPullCliHandler } from './GitCliHandlers/GitPullCliHandler'
 import { GitCloneCliHandler } from './GitCliHandlers/GitCloneCliHandler'
 import { ProcessableElementsQueue } from '../common/ProcessableElementsQueue'
 
-export type ExistingRepoBehaviour = 'skip' | 'drop' | 'fetch' | 'pull'
+export type ExistingRepoBehaviour = 'skip' | 'drop'
 export class GitCloner {
 
     private existingBehaviour: ExistingRepoBehaviour
     private directory: string
     private gitSshUrl: string
     private gitCloneFlags?: string
-    private gitFetchFlags?: string
-    private gitPullFlags?: string
     private trimPath: number
     private projects: ProcessableElementsQueue<ProjectDTO>
     private onError: 'abort' | 'skip' | 'retry'
@@ -30,17 +26,13 @@ export class GitCloner {
         existingBehaviour: ExistingRepoBehaviour = 'skip',
         onError: 'abort' | 'skip' | 'retry',
         retries: number,
-        gitCloneFlags?: string,
-        gitFetchFlags?: string,
-        gitPullFlags?: string
+        gitCloneFlags?: string
     ) {
         this.gitSshUrl = `ssh://git@${baseSshUrl}`
         this.directory = Path.normalize(directory)
         this.trimPath = trimPath
         this.existingBehaviour = existingBehaviour
         this.gitCloneFlags = gitCloneFlags || ''
-        this.gitFetchFlags = gitFetchFlags || '--all --prune --force'
-        this.gitPullFlags = gitPullFlags || '--progress -v --no-rebase "origin"'
         this.projects = new ProcessableElementsQueue<ProjectDTO>(projects, onError, retries, (project)=>{return project.path_with_namespace})
         this.onError = onError
     }
@@ -92,15 +84,8 @@ export class GitCloner {
     }
 
     private gitHandlerFactory(workingCopyAlreadyExists: boolean, remotePath: string, localPath: string): AbstractGitCliHandler | undefined {
-        if (workingCopyAlreadyExists) {
-            switch (this.existingBehaviour) {
-                case 'skip':
-                    return undefined
-                case 'fetch':
-                    return new GitFetchCliHandler(localPath, this.gitFetchFlags || '')
-                case 'pull':
-                    return new GitPullCliHandler(localPath, this.gitPullFlags || '')
-            }
+        if (workingCopyAlreadyExists && this.existingBehaviour == 'skip') {
+            return undefined
         }
         return new GitCloneCliHandler(remotePath, localPath, this.gitCloneFlags || '') // ну, да, не очень круто, что зависимость от реализаций сохраняется, но думать дальше лень
     }

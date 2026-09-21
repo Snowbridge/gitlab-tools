@@ -135,18 +135,18 @@ $ docker run --rm gitlab-tools-afin gitlab-tools report -q search=bg-pa
 #!/bin/bash
 
 echo "application codebase"
-gitlab-tools clone --dir ./app --qp ^farzoom/afinance/\(?\!fz-\).* --trim 2  --existing pull
-gitlab-tools clone --dir ./app/common --qp ^farzoom/common/\(?\!fz-\).* --trim 2  --existing pull
-gitlab-tools clone --dir ./app/poas-system --qp farzoom/afinance-poas-system --trim 2  --existing pull
-gitlab-tools clone --dir ./app/rate --qp farzoom/afinance-rate --trim 2  --existing pull
-gitlab-tools clone --dir ./app/spr --qp farzoom/afinance-spr --trim 2  --existing pull
-gitlab-tools clone --dir ./app/tmpl-system --qp farzoom/afinance-tmpl-system --trim 2  --existing pull
+gitlab-tools clone --dir ./app --qp ^farzoom/afinance/\(?\!fz-\).* --trim 2
+gitlab-tools clone --dir ./app/common --qp ^farzoom/common/\(?\!fz-\).* --trim 2
+gitlab-tools clone --dir ./app/poas-system --qp farzoom/afinance-poas-system --trim 2
+gitlab-tools clone --dir ./app/rate --qp farzoom/afinance-rate --trim 2
+gitlab-tools clone --dir ./app/spr --qp farzoom/afinance-spr --trim 2
+gitlab-tools clone --dir ./app/tmpl-system --qp farzoom/afinance-tmpl-system --trim 2
 
 echo "libraries"
-gitlab-tools clone --dir ./libs --qp ^farzoom/afinance/fz-.* ^farzoom/common/fz-.* --trim 2 --existing pull
+gitlab-tools clone --dir ./libs --qp ^farzoom/afinance/fz-.* ^farzoom/common/fz-.* --trim 2
 
 echo "other"
-gitlab-tools clone --dir ./ --qp ^farzoom/\(autotests\|configs\|devops\|documentation\|templates\|tools\|data-models\) --trim 1 --existing pull
+gitlab-tools clone --dir ./ --qp ^farzoom/\(autotests\|configs\|devops\|documentation\|templates\|tools\|data-models\) --trim 1
 ```
 
 С последним пунктом внимательнее, т.к. это не именно личные, а все, у кого вы `owner`. Хотя беды и не будет, конечно.
