@@ -2,6 +2,7 @@ import yargs from 'yargs'
 import * as path from 'path'
 import { resolveWorkspaceCopies } from '../../../services/Workspace'
 import { GitMergeCliHandler, GitMergeOptions, getGlobalDefaultBranch, hasBranch, hasLocalBranch } from '../../../services/GitCliHandlers/GitMergeCliHandler'
+import { GitBranchDeleteCliHandler } from '../../../services/GitCliHandlers/GitBranchDeleteCliHandler'
 import { GitSwitchCliHandler } from '../../../services/GitCliHandlers/GitSwitchCliHandler'
 
 export const command = 'merge <from> [to]'
@@ -9,11 +10,15 @@ export const command = 'merge <from> [to]'
 export const describe = 'Слить ветку в текущие рабочие копии'
 
 const DETAILED_DESCRIPTION = [
-    'Сливает ветку <from> в ветку [to] каждой выбранной рабочей копии: switch на [to], git merge <from>, возврат switch -.',
+    'Сливает ветку <from> в ветку [to] каждой выбранной рабочей копии: switch на [to], git merge <from>, затем пост-обработка веток.',
+    'По умолчанию после успеха копия остаётся на [to], локальная ветка <from> удаляется (git branch -d).',
+    '--stay (-s): после успеха git switch - (вернуться на прежнюю ветку), <from> не удаляется. Несовместимо с --keep-source-branch.',
+    '--keep-source-branch (--keep, -k): после успеха остаться на [to], <from> не удаляется. Несовместимо с --stay.',
+    'При ошибке merge или switch на [to] выполняется git switch - (восстановление), удаление <from> не выполняется.',
     'Выбор копий — через resolveWorkspaceCopies с фильтром по веткам: --repos/-r (наследуется от workspace), либо --all, либо --interactive. Фильтр передается через ResolveWorkspaceOptions и отрабатывает до --all и --interactive.',
     'В фильтр попадают только копии с обеими ветками: <from> локально или на remote, [to] строго локально; остальные молча отсекаются, если таких все — ошибка.',
     '[to] по умолчанию — git config --global init.defaultBranch, фолбэк master; from == to — ранняя ошибка.',
-    'git switch - выполняется всегда, даже после неуспеха; в конце суммарный отчет.',
+    'В конце суммарный отчёт по копиям.',
 ].join('\n')
 
 export function createMergeBranchFilter(from: string, to: string): (abs: string) => Promise<boolean> {
@@ -41,10 +46,28 @@ export function argvToMergeOptions(argv: any): GitMergeOptions {
     }
 }
 
+export interface MergePostBranchOptions {
+    stay: boolean
+    keepSourceBranch: boolean
+}
+
+export function argvToMergePostBranchOptions(argv: any): MergePostBranchOptions {
+    return {
+        stay: !!(argv.stay ?? argv.s),
+        keepSourceBranch: !!(
+            argv['keep-source-branch'] ?? argv.keepSourceBranch ?? argv.keep ?? argv.k
+        ),
+    }
+}
+
 export function checkMergeArgs(argv: any): boolean {
     const repos = (argv.repos as string[]) ?? []
     const all = !!argv.all
     const interactive = !!argv.interactive
+    const { stay, keepSourceBranch } = argvToMergePostBranchOptions(argv)
+    if (stay && keepSourceBranch) {
+        throw new Error('Опции --stay и --keep-source-branch не могут использоваться вместе')
+    }
     if (all && interactive)
         throw new Error('Опции --interactive и --all не могут использоваться вместе')
     if (repos.length > 0 && (all || interactive)) {
@@ -98,6 +121,16 @@ export const builder = (y: yargs.Argv) => {
                 array: true,
                 desc: 'Опция merge-стратегии (git merge -X, можно несколько раз)',
             },
+            stay: {
+                type: 'boolean',
+                alias: 's',
+                desc: 'После успеха вернуться на прежнюю ветку (git switch -), не удалять <from>',
+            },
+            'keep-source-branch': {
+                type: 'boolean',
+                alias: ['keep', 'k'],
+                desc: 'После успеха остаться на [to], не удалять локальную ветку <from>',
+            },
         })
         .check((argv) => checkMergeArgs(argv as any))
         .epilog(DETAILED_DESCRIPTION)
@@ -109,6 +142,7 @@ export const handler = async (argv: any): Promise<void> => {
     const interactive: boolean = !!argv.interactive
     const repos: string[] = argv.repos ?? []
     const options = argvToMergeOptions(argv)
+    const postBranch = argvToMergePostBranchOptions(argv)
     const from: string = options.from
 
     try {
@@ -179,8 +213,19 @@ export const handler = async (argv: any): Promise<void> => {
                 console.error(`✖ ${rel}: ${detail}`)
                 copyFailed = true
             } finally {
+                if (copyFailed || postBranch.stay) {
+                    try {
+                        await new GitSwitchCliHandler(abs, { branch: '-' }).execute()
+                    } catch (e: unknown) {
+                        const detail = extractErrorDetail(e)
+                        console.error(`✖ ${rel}: ${detail}`)
+                        copyFailed = true
+                    }
+                }
+            }
+            if (!copyFailed && !postBranch.stay && !postBranch.keepSourceBranch) {
                 try {
-                    await new GitSwitchCliHandler(abs, { branch: '-' }).execute()
+                    await new GitBranchDeleteCliHandler(abs, { branch: from }).execute()
                 } catch (e: unknown) {
                     const detail = extractErrorDetail(e)
                     console.error(`✖ ${rel}: ${detail}`)

@@ -7,8 +7,10 @@ import {
     getGlobalDefaultBranch,
     hasBranch,
 } from '../main/services/GitCliHandlers/GitMergeCliHandler'
+import { GitBranchDeleteCliHandler } from '../main/services/GitCliHandlers/GitBranchDeleteCliHandler'
 import {
     argvToMergeOptions,
+    argvToMergePostBranchOptions,
     builder,
     checkMergeArgs,
     handler,
@@ -78,6 +80,51 @@ describe('GitMergeCliHandler.getCommand', () => {
     })
 })
 
+describe('GitBranchDeleteCliHandler.getCommand', () => {
+    it('builds -d delete command', () => {
+        expect(new GitBranchDeleteCliHandler('/repo', { branch: 'dev' }).getCommand()).toBe(
+            'git branch -d dev'
+        )
+    })
+
+    it('quotes branch names with spaces', () => {
+        expect(new GitBranchDeleteCliHandler('/repo', { branch: 'my branch' }).getCommand()).toBe(
+            'git branch -d "my branch"'
+        )
+    })
+
+    it('uses -D when force is set', () => {
+        expect(
+            new GitBranchDeleteCliHandler('/repo', { branch: 'dev', force: true }).getCommand()
+        ).toBe('git branch -D dev')
+    })
+})
+
+describe('argvToMergePostBranchOptions', () => {
+    it('maps stay and keep-source-branch aliases', () => {
+        expect(argvToMergePostBranchOptions({ stay: true })).toEqual({
+            stay: true,
+            keepSourceBranch: false,
+        })
+        expect(argvToMergePostBranchOptions({ s: true })).toEqual({
+            stay: true,
+            keepSourceBranch: false,
+        })
+        expect(argvToMergePostBranchOptions({ keep: true })).toEqual({
+            stay: false,
+            keepSourceBranch: true,
+        })
+        expect(argvToMergePostBranchOptions({ k: true })).toEqual({
+            stay: false,
+            keepSourceBranch: true,
+        })
+        expect(argvToMergePostBranchOptions({ 'keep-source-branch': true })).toEqual({
+            stay: false,
+            keepSourceBranch: true,
+        })
+    })
+})
+
 describe('argvToMergeOptions', () => {
     it('maps kebab-case flags and aliases', () => {
         const opts = argvToMergeOptions({
@@ -126,6 +173,19 @@ describe('checkMergeArgs', () => {
         expect(() =>
             checkMergeArgs({ from: 'dev', repos: [], all: true, interactive: true })
         ).toThrow('Опции --interactive и --all не могут использоваться вместе')
+    })
+
+    it('rejects --stay with --keep-source-branch', () => {
+        expect(() =>
+            checkMergeArgs({
+                from: 'dev',
+                repos: ['./a'],
+                all: false,
+                interactive: false,
+                stay: true,
+                keep: true,
+            })
+        ).toThrow('Опции --stay и --keep-source-branch не могут использоваться вместе')
     })
 
     it('requires <from>', () => {
@@ -275,13 +335,19 @@ describe('merge handler loop', () => {
         }
     }
 
+    const showRefBothBranches = 'abc refs/heads/dev\ndef refs/heads/main\n'
+
     function showRefWithDev(): void {
         mockExecImpl((cmd, _opts, callback) => {
             if (cmd === 'git show-ref') {
-                callback(null, 'abc refs/heads/dev\n', '')
+                callback(null, showRefBothBranches, '')
                 return
             }
-            if (cmd.startsWith('git switch') || cmd.startsWith('git merge')) {
+            if (
+                cmd.startsWith('git switch')
+                || cmd.startsWith('git merge')
+                || cmd.startsWith('git branch -d')
+            ) {
                 callback(null, '', '')
                 return
             }
@@ -289,22 +355,41 @@ describe('merge handler loop', () => {
         })
     }
 
-    it('merges successfully: switch to, merge, switch back, success report', async () => {
+    it('merges successfully: switch to, merge, delete from, stay on to', async () => {
         showRefWithDev()
         await handler(baseArgv())
 
         const cmds = execMock.mock.calls.map((c) => c[0] as string)
         expect(cmds).toContain('git switch main')
         expect(cmds).toContain('git merge dev')
-        expect(cmds).toContain('git switch -')
+        expect(cmds).toContain('git branch -d dev')
+        expect(cmds).not.toContain('git switch -')
         expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('✔'))
         expect(process.exitCode).toBe(0)
+    })
+
+    it('with --stay: switch back and no branch delete', async () => {
+        showRefWithDev()
+        await handler(baseArgv({ stay: true, repos: ['a'] }))
+
+        const cmds = execMock.mock.calls.map((c) => c[0] as string)
+        expect(cmds).toContain('git switch -')
+        expect(cmds).not.toContain('git branch -d dev')
+    })
+
+    it('with --keep-source-branch: stay on to and no branch delete', async () => {
+        showRefWithDev()
+        await handler(baseArgv({ keep: true, repos: ['a'] }))
+
+        const cmds = execMock.mock.calls.map((c) => c[0] as string)
+        expect(cmds).not.toContain('git switch -')
+        expect(cmds).not.toContain('git branch -d dev')
     })
 
     it('on merge failure still calls switch - and exits 1', async () => {
         mockExecImpl((cmd, _opts, callback) => {
             if (cmd === 'git show-ref') {
-                callback(null, 'abc refs/heads/dev\n', '')
+                callback(null, showRefBothBranches, '')
                 return
             }
             if (cmd === 'git merge dev') {
@@ -317,8 +402,8 @@ describe('merge handler loop', () => {
 
         const cmds = execMock.mock.calls.map((c) => c[0] as string)
         expect(cmds).toContain('git merge dev')
-        // switch - всегда, даже после неуспеха merge
         expect(cmds).toContain('git switch -')
+        expect(cmds).not.toContain('git branch -d dev')
         expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('CONFLICT'))
         expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Не удалось смержить 1 из 1'))
         expect(process.exitCode).toBe(1)
@@ -327,7 +412,7 @@ describe('merge handler loop', () => {
     it('on switch-to failure merge is not called but switch - is attempted', async () => {
         mockExecImpl((cmd, _opts, callback) => {
             if (cmd === 'git show-ref') {
-                callback(null, 'abc refs/heads/dev\n', '')
+                callback(null, showRefBothBranches, '')
                 return
             }
             if (cmd === 'git switch main') {
@@ -345,7 +430,7 @@ describe('merge handler loop', () => {
         expect(process.exitCode).toBe(1)
     })
 
-    it('skips copies without <from> and errors when none have it', async () => {
+    it('skips copies without both branches and errors when none qualify', async () => {
         mockExecImpl((cmd, _opts, callback) => {
             if (cmd === 'git show-ref') {
                 callback(null, 'abc refs/heads/main\n', '')
@@ -355,8 +440,7 @@ describe('merge handler loop', () => {
         })
         await handler(baseArgv())
 
-        expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('нет ветки dev'))
-        expect(errorSpy).toHaveBeenCalledWith('Не найдено рабочих копий с веткой dev')
+        expect(errorSpy).toHaveBeenCalledWith('Не найдено рабочих копий с ветками dev и main')
         expect(process.exitCode).toBe(1)
         const cmds = execMock.mock.calls.map((c) => c[0] as string)
         expect(cmds).not.toContain('git merge dev')
@@ -371,7 +455,15 @@ describe('merge handler loop', () => {
                 return
             }
             if (cmd === 'git show-ref') {
-                callback(null, 'abc refs/heads/dev\n', '')
+                callback(null, 'abc refs/heads/dev\ndef refs/heads/trunk\n', '')
+                return
+            }
+            if (
+                cmd.startsWith('git switch')
+                || cmd.startsWith('git merge')
+                || cmd.startsWith('git branch -d')
+            ) {
+                callback(null, '', '')
                 return
             }
             callback(null, '', '')
