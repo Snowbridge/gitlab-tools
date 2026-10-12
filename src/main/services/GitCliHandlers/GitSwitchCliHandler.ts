@@ -1,4 +1,5 @@
 import { AbstractGitCliHandlerWithCwd } from './GitRemoteCliHandler'
+import { quoteArg } from './quoteArg'
 
 export interface GitSwitchOptions {
     branch?: string
@@ -19,11 +20,7 @@ export interface GitSwitchOptions {
     ignoreOtherWorktrees?: boolean
 }
 
-export function quoteArg(arg: string): string {
-    if (/^[A-Za-z0-9_@%+=:,./-]+$/.test(arg))
-        return arg
-    return `"${arg.replace(/(["\\$`!])/g, '\\$1')}"`
-}
+export { quoteArg } from './quoteArg'
 
 export class GitSwitchCliHandler extends AbstractGitCliHandlerWithCwd {
     private options: GitSwitchOptions

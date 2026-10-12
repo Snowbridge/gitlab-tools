@@ -2,8 +2,12 @@ import { exec } from 'node:child_process'
 import {
     GitRemoteAddCliHandler,
     GitRemoteGetUrlCliHandler,
+    GitRemoteListCliHandler,
+    GitRemotePruneCliHandler,
     GitRemoteRemoveCliHandler,
     GitRemoteRenameCliHandler,
+    GitRemoteSetBranchesCliHandler,
+    GitRemoteSetHeadCliHandler,
 } from '../main/services/GitCliHandlers/GitRemoteCliHandler'
 import { GitPushAllCliHandler } from '../main/services/GitCliHandlers/GitPushAllCliHandler'
 import { ProcessGitRemoteExecutor } from '../main/services/ProcessGitRemoteExecutor'
@@ -37,6 +41,48 @@ describe('GitRemoteCliHandler', () => {
         expect(new GitRemoteRenameCliHandler('/repo', 'origin', 'origin_old').getCommand()).toBe(
             'git remote rename origin origin_old'
         )
+    })
+
+    it('builds add with fetch and track', () => {
+        expect(
+            new GitRemoteAddCliHandler('/repo', 'origin', 'ssh://h/r.git', {
+                fetch: true,
+                track: ['main', 'dev'],
+            }).getCommand()
+        ).toBe('git remote add --fetch -t main -t dev origin ssh://h/r.git')
+    })
+
+    it('builds get-url with push and all', () => {
+        expect(
+            new GitRemoteGetUrlCliHandler('/repo', 'origin', { push: true, all: true }).getCommand()
+        ).toBe('git remote get-url --push --all origin')
+    })
+
+    it('builds list verbose', () => {
+        expect(new GitRemoteListCliHandler('/repo', { verbose: true }).getCommand()).toBe(
+            'git remote -v'
+        )
+    })
+
+    it('builds prune dry-run', () => {
+        expect(new GitRemotePruneCliHandler('/repo', 'origin', { dryRun: true }).getCommand()).toBe(
+            'git remote prune -n origin'
+        )
+    })
+
+    it('builds set-head auto', () => {
+        expect(
+            new GitRemoteSetHeadCliHandler('/repo', 'origin', { auto: true }).getCommand()
+        ).toBe('git remote set-head origin --auto')
+    })
+
+    it('builds set-branches add', () => {
+        expect(
+            new GitRemoteSetBranchesCliHandler('/repo', 'origin', {
+                add: true,
+                branches: ['main'],
+            }).getCommand()
+        ).toBe('git remote set-branches --add origin main')
     })
 
     it('executes with cwd', async () => {

@@ -1,6 +1,6 @@
 import yargs from 'yargs'
 
-export const command = 'workspace'
+export const command = 'workspace <command> [options] [--dir <path>] [--repos <path>]'
 
 export const aliases = ['ws', 'w'];
 
