@@ -1,6 +1,6 @@
 {
   "name": "gitlab-tools",
-  "version": "2.15.2",
+  "version": "2.15.3",
   "description": "CLI utility for batch operations on GitLab repositories: reports, cloning, topics, publishing, and local working copy manipulations.",
   "main": "./build/main/index.js",
   "scripts": {

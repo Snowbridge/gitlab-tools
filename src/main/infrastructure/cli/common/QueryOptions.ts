@@ -47,9 +47,18 @@ export default (yargs: yargs.Argv, makeHidden = false) => {
                 hidden: makeHidden,
                 alias: ['query-name'],
                 coerce: coerceParameterQueryNames
-            }
+            },
+            'include-inactive': {
+                type: 'boolean',
+                default: false,
+                desc: [
+                    'Включать неактивные репозитории (архивные и помеченные на удаление).',
+                    'По умолчанию к отбору добавляется -q active=true.',
+                ].join('\n\t'),
+            },
         })
         .middleware(collectAllQueryExpressions, false)
+        .middleware(applyDefaultActiveQuery, false)
         .hide('token')
         .hide('host')
         .hide('port')
@@ -94,4 +103,18 @@ function collectAllQueryExpressions(argv: any): void {
     ].forEach(it => { if (Array.isArray(it)) expressions.push(...it) })
 
     argv.expressions = expressions
+}
+
+export function applyDefaultActiveQuery(argv: {
+    includeInactive?: boolean
+    q?: QueryAttributeExpression[]
+    expressions?: ParameterExpression[]
+}): void {
+    if (argv.includeInactive)
+        return
+    if ((argv.q ?? []).some(e => e.getLeftValue() === 'active'))
+        return
+    if (!argv.expressions)
+        argv.expressions = []
+    argv.expressions.push(new QueryAttributeExpression('active=true'))
 }
