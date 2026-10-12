@@ -47,14 +47,14 @@ gitlab-tools --help
 
 Параметры подключения к GitLab хранятся в профилях в каталоге `~/.config/gitlab-tools/`:
 
-- файл `<имя>.conf` — хост и токен доступа (формат dotenv, по одному параметру на строку);
+- файл `<имя>.conf` — параметры в формате dotenv (`HOST`, `TOKEN` обязательны; остальные ключи — см. `gitlab-tools config --help`);
 - файл `profile` — имя активного профиля (одна строка).
 
 Типичный сценарий для нового пользователя:
 
 ```bash
 gitlab-tools config create mygitlab
-gitlab-tools config edit mygitlab    # указать хост и токен в открывшемся файле
+gitlab-tools config edit mygitlab    # заполнить HOST и TOKEN в открывшемся файле
 gitlab-tools config use mygitlab
 gitlab-tools config test
 ```

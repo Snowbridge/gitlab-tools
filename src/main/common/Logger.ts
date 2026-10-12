@@ -1,10 +1,13 @@
 import winston from 'winston'
 import { buildLogFilePath } from './LogFiles'
+import { getRuntimeConfig } from './ProfileConfig'
 
 function logFilePath(): string {
-    return buildLogFilePath(
-        process.env.LOG_FILENAME || (Math.random() * 100).toString(36).replace('.', ''),
-    )
+    const { logFilename } = getRuntimeConfig()
+    const name =
+        logFilename ||
+        (Math.random() * 100).toString(36).replace('.', '')
+    return buildLogFilePath(name)
 }
 
 export function createLogger(loggerName: string): winston.Logger {
@@ -24,7 +27,7 @@ export function createLogger(loggerName: string): winston.Logger {
         ],
     })
 
-    if (!!process.env.DEBUG)
+    if (getRuntimeConfig().debug)
         logger.add(new winston.transports.Console({
             format: winston.format.simple(),
         }))
@@ -32,6 +35,24 @@ export function createLogger(loggerName: string): winston.Logger {
     return logger
 }
 
-export const httpClientLogger = createLogger('GitlabHttp')
+let httpClientLoggerInstance: winston.Logger | undefined
+
+export function getHttpClientLogger(): winston.Logger {
+    if (!httpClientLoggerInstance)
+        httpClientLoggerInstance = createLogger('GitlabHttp')
+    return httpClientLoggerInstance
+}
+
+/** Пересоздать HTTP-логгер после смены LOG_FILENAME / DEBUG в runtime. */
+export function refreshHttpClientLogger(): void {
+    httpClientLoggerInstance = undefined
+}
+
+/** @deprecated используйте getHttpClientLogger(); оставлено для совместимости импортов */
+export const httpClientLogger = new Proxy({} as winston.Logger, {
+    get(_target, prop, receiver) {
+        return Reflect.get(getHttpClientLogger(), prop, receiver)
+    },
+})
 
 export default (parent: Function) => createLogger(parent.name)

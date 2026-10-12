@@ -10,7 +10,7 @@
 ## Build / Run
 - **Rebuild (required after any src change):** `npm run rebuild` (= `rm -Rf ./build/* && tsc && chmod +x ./build/main/index.js && touch .env`). Do not substitute bare `tsc`. On Windows run in Git Bash (plain `cmd` fails on `rm -Rf`).
 - **Run locally:** `node . --help`, or `gitlab-tools --help` after `npm run install-globally`. Built output is `build/main/index.js`.
-- Env: `GITLAB_HOST` + `GITLAB_TOKEN` (or `--host`/`--token` flags) required except `config`, `log`, and `workspace status|switch|remote` (checked in `src/main/index.ts`). Precedence: repo `.env` overrides `~/.config/gitlab-tools/<profile>.conf` (active profile name from `~/.config/gitlab-tools/profile`). `.env` is gitignored and created empty by `rebuild`.
+- Config: active profile `~/.config/gitlab-tools/profile` → `~/.config/gitlab-tools/<name>.conf` (dotenv keys `HOST`, `TOKEN`, optional `PORT`, `ON_ERROR`, `RETRIES`, `LOG_FILENAME`, `DEBUG`). Loaded at startup via `ProfileConfig` into runtime; yargs globals default from profile; hidden `--host`/`--token` override. Required except `config`, `log`, and `workspace status|switch|remote` (checked in `src/main/index.ts`). `config create` writes a template; `config edit` uses `$EDITOR` or `nano`.
 - Global `--port` defaults to 443 (GitLab API), but `clone` and `workspace publish` override it to 22 (SSH).
 
 ## Test / Lint / Coverage
@@ -27,5 +27,5 @@
 - `clone --existing` is only `skip` | `drop` (fetch/pull were moved to `workspace fetch` / `workspace pull`). `clone --query-path`/`--qp` is regex; escape shell chars `! ( ) ; $` with backslash.
 - Logs are JSON lines in `os.tmpdir()` as `gitlab-tools-*.log.json`, not `./out`; the `log` command reads from there.
 - Retry is broken for `git clone` when the target dir already exists (second `clone` fails).
-- `GITLAB_TOKEN` is masked in display output (first 4 chars + `********`) unless `--unmasked`.
+- Profile `TOKEN` is masked in `config` display output (first 4 chars + `********`) unless `--unmasked`.
 - Do not commit `build/`, `coverage/`, `out/`, `data/`, `.env`, `package-lock.json`, `node_modules` (gitignored).

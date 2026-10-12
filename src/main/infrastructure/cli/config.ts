@@ -1,4 +1,5 @@
 import yargs from 'yargs'
+import { formatProfileKeysForHelp } from '../../common/ProfileConfig'
 import {
     GitlabToolsProfileConfigService,
     type ProfileActionResult,
@@ -21,9 +22,12 @@ export const command = 'config'
 export const describe = 'Управление профилями конфигурации'
 
 const DETAILED_DESCRIPTION = [
-    'Профили хранятся в ~/.config/gitlab-tools/ как файлы <name>.conf с GITLAB_HOST и GITLAB_TOKEN.',
-    'Активный профиль указывается в файле profile; при старте утилиты dotenv подхватывает соответствующий .conf.',
-    'Без подкоманды — показать активный профиль и его содержимое. Опция --unmasked выводит токен без маскировки.',
+    'Профили хранятся в ~/.config/gitlab-tools/ как файлы <name>.conf (формат dotenv).',
+    'Активный профиль указывается в файле profile; при старте утилиты читается соответствующий .conf.',
+    'Без подкоманды — показать активный профиль и его содержимое. Опция --unmasked выводит TOKEN без маскировки.',
+    '',
+    'Ключи в файле профиля:',
+    formatProfileKeysForHelp(),
 ].join('\n')
 
 export const builder = (yargs: yargs.Argv) => {
@@ -32,7 +36,7 @@ export const builder = (yargs: yargs.Argv) => {
         .option('unmasked', {
             type: 'boolean',
             default: false,
-            describe: 'Показать GITLAB_TOKEN без маскировки (по умолчанию токен скрыт)',
+            describe: 'Показать TOKEN без маскировки (по умолчанию токен скрыт)',
         })
         .commandDir('config')
 }

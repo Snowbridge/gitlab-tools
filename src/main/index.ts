@@ -1,53 +1,61 @@
 #!/usr/bin/env node
 
-import dotenv from 'dotenv'
-import fs from 'fs'
 import yargs from 'yargs/yargs'
 import path from 'path'
-import { profileFilePath, readActiveProfileName } from './services/ConfigProfileService'
+import { refreshHttpClientLogger } from './common/Logger'
+import {
+    defaultLogFilename,
+    escapeTokenForDisplay,
+    getRuntimeConfig,
+    loadActiveProfileIntoRuntime,
+    patchRuntimeConfig,
+} from './common/ProfileConfig'
 
-loadConfig()
+loadActiveProfileIntoRuntime()
+
+const initial = getRuntimeConfig()
 
 yargs(process.argv.slice(2))
     .options({
         host: {
             type: 'string',
-            default: process.env.GITLAB_HOST,
-            desc: 'дефолт берется из переменной окружения GITLAB_HOST',
+            default: initial.host,
+            desc: 'хост GitLab; по умолчанию HOST из активного профиля',
             hidden: true,
         },
         token: {
             type: 'string',
-            default: process.env.GITLAB_TOKEN,
-            defaultDescription: !process.env.GITLAB_TOKEN ? 'undefined' : escapeToken(process.env.GITLAB_TOKEN),
-            desc: 'дефолт берется из переменной окружения GITLAB_TOKEN',
+            default: initial.token,
+            defaultDescription: !initial.token ? 'undefined' : escapeTokenForDisplay(initial.token),
+            desc: 'токен GitLab; по умолчанию TOKEN из активного профиля',
             hidden: true,
         },
         port: {
             type: 'number',
-            default: 443,
+            default: initial.port,
             desc: 'TCP-порт, на котором раздается Gitlab API',
             hidden: true,
         },
         'on-error': {
             desc: 'Что делать при возникновении исключений, применяется к ошибкам работы с REST и некоторым другим.',
             choices: ['retry', 'abort', 'skip'],
-            default: 'retry',
+            default: initial.onError,
             hidden: true
         },
         'retries': {
             desc: 'Количество повторных попыток при обработке исключений. Если все попытки исчерпаны, но ошибка не починилась, то применяется вариант \'--on-error=skip\'',
             type: 'number',
-            default: 3,
+            default: initial.retries,
             hidden: true
         },
         log: {
             desc: 'Имя файла, в который складываются логи',
             type: 'string',
-            default: `gitlab-tools-${new Date().toISOString().replaceAll(':', '-')}.log`,
+            default: initial.logFilename || defaultLogFilename(),
             hidden: true,
             coerce: (argv) => {
-                process.env.LOG_FILENAME = argv
+                patchRuntimeConfig({ logFilename: argv })
+                refreshLoggers()
                 return argv
             }
         },
@@ -64,8 +72,16 @@ yargs(process.argv.slice(2))
     .showHidden('show-hidden', 'Show hidden options')
     .demandCommand(1)
     .check((argv) => {
-        if (!!argv.debug)
-            process.env.DEBUG = 'true'
+        patchRuntimeConfig({
+            host: argv.host as string | undefined,
+            token: argv.token as string | undefined,
+            port: argv.port as number,
+            onError: argv.onError as 'retry' | 'abort' | 'skip',
+            retries: argv.retries as number,
+            debug: !!argv.debug || getRuntimeConfig().debug,
+        })
+        if (argv.debug)
+            refreshLoggers()
         const top = argv._[0]
         if (top === 'config' || top === 'log')
             return true
@@ -75,7 +91,9 @@ yargs(process.argv.slice(2))
             if (sub === 'status' || sub === 'switch' || sub === 'remote') return true
         }
         if (!argv.host || !argv.token)
-            throw new Error('Задайте GITLAB_HOST и GITLAB_TOKEN (или опции --host и --token)')
+            throw new Error(
+                'Задайте HOST и TOKEN в активном профиле (gitlab-tools config use / config edit) или передайте --host и --token',
+            )
         return true
     })
     .strict()
@@ -83,19 +101,6 @@ yargs(process.argv.slice(2))
     .parseAsync()
     .then();
 
-function loadConfig() {
-    const profileName = readActiveProfileName()
-    if (profileName) {
-        const confPath = profileFilePath(profileName)
-        if (fs.existsSync(confPath))
-            dotenv.config({ path: confPath, override: true })
-    }
-    dotenv.config({ override: true })
-}
-
-function escapeToken(token: string, left = 3, right = 2): string {
-    if (token.length < left + right)
-        return token[0] + new Array(token.length).join('*');
-    const regex = new RegExp(`^(.{${left},${left}}).*(.{${right},${right}})$`, 'ig');
-    return token.replace(regex, `$1${new Array(token.length - left - right + 1).join('*')}$2`);
+function refreshLoggers(): void {
+    refreshHttpClientLogger()
 }

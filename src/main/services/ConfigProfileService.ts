@@ -1,31 +1,27 @@
 import { spawnSync } from 'child_process'
-import dotenv from 'dotenv'
 import fs from 'fs'
-import os from 'os'
-import path from 'path'
+import {
+    configDir,
+    profileFilePath,
+    profilePointerPath,
+    readActiveProfileName,
+} from '../common/ConfigPaths'
+import {
+    buildNewProfileTemplate,
+    loadProfileFromPath,
+    maskProfileBodyForDisplay,
+    rawToRuntime,
+} from '../common/ProfileConfig'
 import { GitlabApi } from '../infrastructure/clients/gitlab/Client'
 
-export const configDir = path.join(os.homedir(), '.config', 'gitlab-tools')
-
-export const profilePointerPath = path.join(configDir, 'profile')
-
-export function profileFilePath(profileName: string): string {
-    return path.join(configDir, `${profileName}.conf`)
-}
+export {
+    configDir,
+    profileFilePath,
+    readActiveProfileName,
+} from '../common/ConfigPaths'
 
 export function ensureConfigDir(): void {
     fs.mkdirSync(configDir, { recursive: true })
-}
-
-export function readActiveProfileName(): string | undefined {
-    try {
-        if (!fs.existsSync(profilePointerPath))
-            return undefined
-        const s = fs.readFileSync(profilePointerPath, 'utf8').trim()
-        return s.length > 0 ? s : undefined
-    } catch {
-        return undefined
-    }
 }
 
 export function writeActiveProfileName(name: string): void {
@@ -56,14 +52,11 @@ export function listProfileNames(): string[] {
     }
 }
 
-const CONFIG_KEYS = ['GITLAB_HOST', 'GITLAB_TOKEN'] as const
-
 export type ProfileActionResult =
     | { ok: true; stdout?: string[]; stderr?: string[]; editorExitCode?: number }
     | { ok: false; exitCode: number; stderr: string }
 
 export class GitlabToolsProfileConfigService {
-    /** Имя активного профиля и содержимое файла конфигурации (*.conf). */
     showActiveProfileAndConfig(unmasked = false): ProfileActionResult {
         const name = readActiveProfileName()
         const stdout: string[] = []
@@ -78,7 +71,7 @@ export class GitlabToolsProfileConfigService {
             return { ok: true, stdout }
         }
         const body = fs.readFileSync(filePath, 'utf8')
-        stdout.push(formatConfigBodyForDisplay(body, unmasked))
+        stdout.push(maskProfileBodyForDisplay(body, unmasked))
         return { ok: true, stdout }
     }
 
@@ -121,19 +114,7 @@ export class GitlabToolsProfileConfigService {
                 stderr: `Файл уже существует: ${dest} (используйте --force)`,
             }
         ensureConfigDir()
-        const lines: string[] = []
-        for (const key of CONFIG_KEYS) {
-            const v = process.env[key]
-            if (v !== undefined && v !== '')
-                lines.push(`${key}=${v}`)
-        }
-        if (lines.length === 0)
-            return {
-                ok: false,
-                exitCode: 1,
-                stderr: 'Нет значений GITLAB_HOST / GITLAB_TOKEN в окружении.',
-            }
-        fs.writeFileSync(dest, `${lines.join('\n')}\n`, 'utf8')
+        fs.writeFileSync(dest, buildNewProfileTemplate(), 'utf8')
         return { ok: true, stdout: [`Записано: ${dest}`] }
     }
 
@@ -163,29 +144,40 @@ export class GitlabToolsProfileConfigService {
     }
 
     async testConnection(profileName?: string): Promise<ProfileActionResult> {
-        let profileLabel = 'текущий'
+        let profileLabel: string
+        let filePath: string
 
         if (profileName !== undefined) {
             if (!isSafeProfileName(profileName))
                 return { ok: false, exitCode: 1, stderr: 'Недопустимое имя профиля.' }
-            const filePath = profileFilePath(profileName)
-            if (!fs.existsSync(filePath))
-                return { ok: false, exitCode: 1, stderr: `Профиль не найден: ${filePath}` }
-            dotenv.config({ path: filePath, override: true })
+            filePath = profileFilePath(profileName)
             profileLabel = profileName
+        } else {
+            const active = readActiveProfileName()
+            if (!active)
+                return {
+                    ok: false,
+                    exitCode: 1,
+                    stderr: 'Не выбран активный профиль (файл profile).',
+                }
+            filePath = profileFilePath(active)
+            profileLabel = active
         }
 
-        const host = process.env.GITLAB_HOST
-        const token = process.env.GITLAB_TOKEN
-        if (!host || !token)
+        if (!fs.existsSync(filePath))
+            return { ok: false, exitCode: 1, stderr: `Профиль не найден: ${filePath}` }
+
+        const raw = loadProfileFromPath(filePath)
+        const cfg = rawToRuntime(raw ?? {})
+        if (!cfg.host || !cfg.token)
             return {
                 ok: false,
                 exitCode: 1,
-                stderr: 'Не заданы GITLAB_HOST и/или GITLAB_TOKEN.',
+                stderr: 'В профиле не заданы HOST и/или TOKEN.',
             }
 
         try {
-            const api = new GitlabApi(`${host}:443`, token)
+            const api = new GitlabApi(`${cfg.host}:${cfg.port}`, cfg.token)
             const pages = await api.testConnection()
             return {
                 ok: true,
@@ -221,23 +213,4 @@ function isSafeProfileName(name: string): boolean {
     if (name.length === 0 || name === '.' || name === '..')
         return false
     return !/[\\/]/.test(name)
-}
-
-function maskTokenForDisplay(token: string): string {
-    return `${token.slice(0, 4)}********`
-}
-
-function formatConfigBodyForDisplay(body: string, unmasked: boolean): string {
-    if (unmasked)
-        return body.trimEnd()
-    return body
-        .split('\n')
-        .map((line) => {
-            if (!line.startsWith('GITLAB_TOKEN='))
-                return line
-            const value = line.slice('GITLAB_TOKEN='.length)
-            return `GITLAB_TOKEN=${maskTokenForDisplay(value)}`
-        })
-        .join('\n')
-        .trimEnd()
 }

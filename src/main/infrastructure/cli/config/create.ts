@@ -7,7 +7,8 @@ export const command = 'create <name>'
 export const describe = 'Создать профиль'
 
 const DETAILED_DESCRIPTION = [
-    'Записать GITLAB_HOST и GITLAB_TOKEN из текущего окружения в файл <name>.conf.',
+    'Создать файл <name>.conf с шаблоном параметров (HOST, TOKEN и опциональные ключи).',
+    'После создания укажите HOST и TOKEN через config edit.',
     'Опция --force перезаписывает существующий профиль.',
 ].join('\n')
 
