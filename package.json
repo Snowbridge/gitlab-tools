@@ -1,6 +1,6 @@
 {
   "name": "gitlab-tools",
-  "version": "2.15.3",
+  "version": "2.15.4",
   "description": "CLI utility for batch operations on GitLab repositories: reports, cloning, topics, publishing, and local working copy manipulations.",
   "main": "./build/main/index.js",
   "scripts": {
@@ -24,7 +24,7 @@
     "enquirer": "^2.4.1",
     "ora": "^8.2.0",
     "winston": "^3.13.0",
-    "yargs": "^17.7.2"
+    "yargs": "^17.7.3"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
